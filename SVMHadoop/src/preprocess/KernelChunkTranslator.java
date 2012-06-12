@@ -14,15 +14,15 @@ public class KernelChunkTranslator {
 	 * 
 	 * translate the binary kernel file into a plain text file.(All float)
 	 * @param in the input 
-	 * @param outdir the output dir for the text file 
-	 * @param dim the dimension of prediction (346)
+	 * @param outdir the output file i.e. the text file 
+	 * @param dim the dimension of kernel (233667)
 	 * @throws IOException
 	 */
-	public static void translate(File in, File outdir, int dim) throws IOException {
-		BufferedWriter bw = new BufferedWriter(new FileWriter(new File(outdir,in.getName()+".txt")),1024*8*16);
+	public static void translate(File in, File outfile, int dim) throws IOException {
+		BufferedWriter bw = new BufferedWriter(new FileWriter(outfile),1024*8*16);
 		DataInputStream br = new DataInputStream(new FileInputStream(in));
 		while(br.available() > 0) {
-			for(int i = 0 ; i < dim-1 ; i ++) {
+			for(int i = 0 ; i < dim -1; i ++) {
 				float kernel = br.readFloat();
 				bw.write(kernel + " ");
 			}
