@@ -49,7 +49,7 @@ public class PredictionMapper {
 		private Path[] pathes;					
 		private String buffer;					//the directory of the buffer
 		private int row_a;						//the number of row in A matrix
-		public boolean debug = false;			
+		public boolean debug = true;			
 	
 	
 	    
@@ -214,7 +214,7 @@ public class PredictionMapper {
 		}
 		
 		protected void writeMatrixChunk2Binary(Path outfile, float[][] big) throws IOException {
-			DataOutputStream out = new DataOutputStream(new BufferedOutputStream(fs.create(outfile,(short)5)));  //replicate the file 5 times for robust
+			DataOutputStream out = new DataOutputStream(new BufferedOutputStream(fs.create(outfile,(short)3)));  //replicate the file 5 times for robust
 			for(int i = 0 ; i < big.length ; i++) {
 				for(int j = 0 ; j < big[i].length ; j++) {
 					out.writeFloat(big[i][j]);
@@ -316,18 +316,18 @@ public class PredictionMapper {
 		//System.out.println(in_a_pathes);
 		
         conf.set("in_a_pathes", in_a_pathes);	
-		conf.set("mapred.child.java.opts", "-Xmx1200m");		//cannot be too large <2000m
+		conf.set("mapred.child.java.opts", "-Xmx1024m");		//cannot be too large <2000m
 		//conf.set("mapred.map.java.opts", "-Xmx1024m");
 			
-		conf.set("mapred.cluster.map.memory.mb","2000");
-		conf.set("mapred.cluster.reduce.memory.mb","2000");
+		conf.set("mapred.cluster.map.memory.mb","2048");
+		conf.set("mapred.cluster.reduce.memory.mb","2048");
 			
-		conf.set("mapred.job.map.memory.mb","2000");
-		conf.set("mapred.job.reduce.memory.mb","2000");
-		conf.set("mapred.tasktracker.map.tasks.maximum","1");
-		conf.set("mapred.map.max.attempts","4");
+		conf.set("mapred.job.map.memory.mb","2048");
+		conf.set("mapred.job.reduce.memory.mb","2048");
+		//conf.set("mapred.tasktracker.map.tasks.maximum","16");
+		conf.set("mapred.map.max.attempts","32");
 			
-		conf.setJobName("casacade-svm-kernel-computer");
+		conf.setJobName("cascade-svm-kernel-computer");
 			
 			
 		//out key and value for mapper
@@ -339,7 +339,7 @@ public class PredictionMapper {
 			
 		conf.setMapperClass(SVMHadoopMapper.class);
 		conf.setReducerClass(SVMHadoopReducer.class);
-		conf.setNumMapTasks(300);
+		conf.setNumMapTasks(600);
 		conf.setNumReduceTasks(1);
 			
 		conf.setInputFormat(SequenceFileInputFormat.class);
