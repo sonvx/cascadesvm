@@ -9,6 +9,12 @@ import java.io.IOException;
 
 public class PredictionTranslator {
 	
+	public static void translateDir(File in, File outdir, int dim) throws IOException {
+		File[] subfiles = in.listFiles();
+		for(int i = 0 ; i < subfiles.length ; i++) {
+			translate(subfiles[i], outdir, dim);
+		}
+	}
 	
 	/**
 	 * 
@@ -35,7 +41,7 @@ public class PredictionTranslator {
 	
 	public static void main(String[] args) throws Exception {
 		
-		translate(new File(args[0]), new File(args[1]), Integer.parseInt(args[2]));
+		translateDir(new File(args[0]), new File(args[1]), Integer.parseInt(args[2]));
 
 	}
 
