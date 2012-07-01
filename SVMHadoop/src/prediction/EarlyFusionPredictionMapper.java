@@ -348,7 +348,7 @@ public class EarlyFusionPredictionMapper {
 		conf.set("mapred.map.max.attempts","8");
 		conf.set("mapred.reduce.max.attempts","8");
 			
-		conf.setJobName("casacade-svm-kernel-fusion");
+		conf.setJobName("cascade-svm-kernel-fusion");
 			
 		//out key and value for mapper
 		conf.setMapOutputKeyClass(IntWritable.class);
@@ -359,7 +359,7 @@ public class EarlyFusionPredictionMapper {
 			
 		conf.setMapperClass(SVMHadoopMapper.class);
 		conf.setReducerClass(SVMHadoopReducer.class);
-		conf.setNumMapTasks(300);
+		conf.setNumMapTasks(500);
 		conf.setNumReduceTasks(1);
 			
 		conf.setInputFormat(SequenceFileInputFormat.class);

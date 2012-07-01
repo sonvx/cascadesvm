@@ -279,8 +279,8 @@ public class PredictionReducer {
 			conf.set("mapred.job.reduce.memory.mb","2000");
 			conf.set("mapred.tasktracker.map.tasks.maximum","1");
 			conf.set("mapred.map.max.attempts","8");
-			conf.set("mapred.reduce.max.attempts","8");	
-			conf.setJobName("casacade-svm-prediction-reducer");
+			conf.set("mapred.reduce.max.attempts","32");	
+			conf.setJobName("cascade-svm-prediction-reducer");
 				
 			// out key and value for mapper
 			conf.setMapOutputKeyClass(IntWritable.class);
