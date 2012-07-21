@@ -150,7 +150,7 @@ public class PredictionMapper {
 			for(int p = 0  ; p < pathes.length ; p++) {
 				loadAMatrix(pathes[p]);		//load A block
 				for(int i = 0 ; i < input.length ; i++) {
-					small[i] = calculator.chi2(inputB[i]);			//calculate the kernel	
+					small[i] = calculator.chi2LeiWithZeros(inputB[i]);			//calculate the kernel	
 				}
 				if(p == 0) a_chunk_size = small[0].length;			//record the chunk size of a by recording the line number of the first file
 				reporter.setStatus("<br>\n I am still alive. Don't kill me...");
@@ -315,17 +315,22 @@ public class PredictionMapper {
 		
 		//System.out.println(in_a_pathes);
 		
-        conf.set("in_a_pathes", in_a_pathes);	
-		conf.set("mapred.child.java.opts", "-Xmx1024m");		//cannot be too large <2000m
+        conf.set("in_a_pathes", in_a_pathes);
+        conf.set("mapred.child.java.opts", "-Xmx2048m");
+		//conf.set("mapred.child.java.opts", "-Xmx1024m");		//cannot be too large <2000m
 		//conf.set("mapred.map.java.opts", "-Xmx1024m");
 			
-		conf.set("mapred.cluster.map.memory.mb","2048");
-		conf.set("mapred.cluster.reduce.memory.mb","2048");
-			
-		conf.set("mapred.job.map.memory.mb","2048");
-		conf.set("mapred.job.reduce.memory.mb","2048");
+		
+		conf.set("mapred.cluster.map.memory.mb","4096");
+		//conf.set("mapred.cluster.map.memory.mb","2048");
+		//conf.set("mapred.cluster.reduce.memory.mb","2048");
+		conf.set("mapred.job.map.memory.mb", "4096");
+		
+		conf.set("mapred.cluster.map.memory.mb","4096");
+		//conf.set("mapred.job.map.memory.mb","2048");
+		conf.set("mapred.job.reduce.memory.mb","4096");
 		//conf.set("mapred.tasktracker.map.tasks.maximum","16");
-		conf.set("mapred.map.max.attempts","32");
+		conf.set("mapred.map.max.attempts","64");
 			
 		conf.setJobName("cascade-svm-kernel-computer");
 			
@@ -339,7 +344,7 @@ public class PredictionMapper {
 			
 		conf.setMapperClass(SVMHadoopMapper.class);
 		conf.setReducerClass(SVMHadoopReducer.class);
-		conf.setNumMapTasks(600);
+		conf.setNumMapTasks(500);
 		conf.setNumReduceTasks(1);
 			
 		conf.setInputFormat(SequenceFileInputFormat.class);
