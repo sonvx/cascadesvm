@@ -57,7 +57,7 @@ public class SVMLocal {
 		String filename = filepath.getName();
 		int lineno = Integer.parseInt(filename.substring(filename.lastIndexOf("-")+1, filename.length()));
 		calculator.inmatrix = new KernelRow[lineno];
-		DataInputStream br = new DataInputStream(new BufferedInputStream(new FileInputStream(filepath),1024*8*1024));
+		DataInputStream br = new DataInputStream(new BufferedInputStream(new FileInputStream(filepath),1024*32*1024));
 		
 		for(int i = 0 ; i < lineno ; i ++) {
 			int thislineno = br.readInt();
@@ -99,8 +99,28 @@ public class SVMLocal {
 				//System.out.println("working with " + pathes[q][p].getName());
 			}
 			
+			/*
+			//debug
+			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(new File("G:\\dis"+q+".txt"))));
 			
+			for(int i = 0 ; i < big.length ; i++) {
+				for(int j = 0 ; j < big[i].length ; j++) {
+					bw.write((-1*(big[i][j]))+" ");
+				}
+				bw.write("\n");
+			}	
+			bw.flush();
+			bw.close();
+			
+			for(int i = 0 ; i < big.length ; i++) {
+				for(int j = 0 ; j < big[i].length ; j++) {
+					//big[i][j] =0f;
+				}
+			}	
+			//debug
+			*/
 		}
+		
 		
 		
 		for(int i = 0 ; i < big.length ; i++) {
@@ -110,16 +130,6 @@ public class SVMLocal {
 		}	
 		
 		
-		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(new File("G:\\dis.txt"))));
-				
-		for(int i = 0 ; i < big.length ; i++) {
-			for(int j = 0 ; j < big[i].length ; j++) {
-				bw.write((-1*(big[i][j]/3.0d))+" ");
-			}
-			bw.write("\r\n");
-		}	
-		bw.flush();
-		bw.close();
 		
 		
 		//create svm node from big
@@ -250,7 +260,7 @@ public class SVMLocal {
 						tfilename.indexOf("inpart") + "inpart".length(),
 						tfilename.lastIndexOf("-")));
 			} catch(NumberFormatException e) {
-				throw new Exception("The input A feature file name is bad formateed:" + tfilename +"\r\n" + e.toString());
+				throw new Exception("The input A feature file name is bad formateed:" + tfilename +"\n" + e.toString());
 			}
 			a_feature_ids.add(id);
 
@@ -367,10 +377,13 @@ public class SVMLocal {
 				double[][] prediction = predictor.predictHadoop(ns);
 				
 				for(int i = 0 ; i < prediction.length ; i++) {
-					for(int j = 0 ; j < prediction[i].length-1 ; j++) {
+					
+					bw.write(((int)prediction[i][0]) + " ");	//line number is an integer
+					
+					for(int j = 1 ; j < prediction[i].length-1 ; j++) {
 						bw.write(prediction[i][j] + " ");
 					}
-					bw.write(prediction[i][prediction[i].length-1] + "\r\n");
+					bw.write(prediction[i][prediction[i].length-1] + "\n");
 				}
 				bw.flush();
 				printMemory();
@@ -409,7 +422,7 @@ public class SVMLocal {
 				}
 			
 			
-				System.out.println("readed No." + linecnt +" with chunk size  = " + this.b_chunk_size);
+				System.out.println("flush" + linecnt +" with chunk size  = " + this.b_chunk_size);
 				//1) clear the big matrix
 				for(int i = 0 ; i < big.length ; i++) {
 					for(int j = 0 ; j < big[i].length ; j++) {
@@ -434,7 +447,7 @@ public class SVMLocal {
 					for(int j = 0 ; j < prediction[i].length-1 ; j++) {
 						bw.write(prediction[i][j] + " ");
 					}
-					bw.write(prediction[i][prediction[i].length-1] + "\r\n");
+					bw.write(prediction[i][prediction[i].length-1] + "\n");
 				}
 				bw.flush();
 				printMemory();
@@ -624,7 +637,6 @@ public class SVMLocal {
 		}
 
 		worker.run();
-		
 	}
 	
 }
