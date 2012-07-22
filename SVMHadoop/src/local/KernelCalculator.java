@@ -57,12 +57,18 @@ public class KernelCalculator {
 		
 	}
 	
+	public float[] chi2LeiWithZeros(KernelRow row) {
+		float[] result =  new float[inmatrix.length];
+		for(int i = 0 ; i < inmatrix.length ; i++) {
+			result[i] = -1 * dotchi2productLei_KernelZero(row, inmatrix[i])/2 ;
+		}
+		return result;
+	}
+	
 	
 	public float[] chi2(KernelRow row) {
 		float[] result =  new float[inmatrix.length];
 		for(int i = 0 ; i < inmatrix.length ; i++) {
-			//if(i==34)
-			//	i=34;
 			result[i] = -1 * dotchi2productLei(row, inmatrix[i])/2 ;
 		}
 		return result;
@@ -89,6 +95,54 @@ public class KernelCalculator {
 		int n2 = r2.indexes.length;
 		int p1 = 0, p2 = 0;
 		if(n1==0 || n2 ==0)	return 2;
+		for (; p1 < n1 && p2 < n2;) {
+			int ind1 = r1.indexes[p1];
+			int ind2 = r2.indexes[p2];
+			if (ind1 == ind2) {
+				// (x_i*y_i)/(x_i+y_i)
+				float sum = r1.values[p1] + r2.values[p2];
+				if(sum == 0)
+					result += 0;	//impossible to happen if all element in input matrix are positive
+				else
+					result += Math.pow((r1.values[p1]- r2.values[p2]),2)/sum;
+				p1++;
+				p2++;
+			} else if (ind1 > ind2) {
+				result += r2.values[p2];
+				p2++;
+			} else {
+				result += r1.values[p1];
+				p1++;	
+			}
+		}
+		if(p1 < n1) {
+			while(p1 < n1) {
+				result += r1.values[p1];
+				p1++;
+			}
+		} else if(p2 < n2) {
+			while(p2 < n2) {
+				result += r2.values[p2];
+				p2++;
+			}
+		}
+		return result;
+	}
+	
+	/**
+	 * Lei's chi square kernel
+	 * @param r1 kernel row 1
+	 * @param r2 kernel row 2
+	 * @return
+	 */
+	public float dotchi2productLei_KernelZero(KernelRow r1, KernelRow r2) {
+		float result = 0;
+		int n1 = r1.indexes.length;
+		int n2 = r2.indexes.length;
+		int p1 = 0, p2 = 0;
+		if(n1==0 && n2 !=0)	return 2;
+		else if(n1 !=0 && n2 ==0)	return 2;
+		
 		for (; p1 < n1 && p2 < n2;) {
 			int ind1 = r1.indexes[p1];
 			int ind2 = r2.indexes[p2];
