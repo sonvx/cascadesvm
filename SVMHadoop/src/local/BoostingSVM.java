@@ -50,7 +50,7 @@ public class BoostingSVM {
 			File[] models = modeldir.listFiles();
 			this.models[i] = new svm_model[models.length];
 			for(int j = 0 ; j < models.length ; j++) {
-				if(!models[j].getName().endsWith("performance")) {
+				if(!models[j].getName().endsWith("performance") && !models[j].getName().endsWith("output")) {
 					svm_model m = SVMPrediction.svm_load_model(models[j]);
 					m.modelID = i;
 					m.layerID = Integer.parseInt(models[j].getName().substring(models[j].getName().lastIndexOf(".")+1,models[j].getName().length()));
@@ -108,7 +108,7 @@ public class BoostingSVM {
 	
 	
 	/**
-	 * Exp(-1*gamma*dis)
+	 * Exp(gamma*dis)
 	 * @param in
 	 * @param out
 	 * @param gamma
@@ -239,13 +239,22 @@ public class BoostingSVM {
 		double[][] re = b.predictHadoop(nodes);
 		printMatrix(re);
 		*/
-
+		/*
+		BoostingSVM b = new BoostingSVM(new File("\\\\mmdb\\e$\\SIN12\\model\\SIN12-SIN12\\SVM\\sin12-concept346.models"));
 		
+		for (int j = 0; j < b.models.length; j++) {
+			for (int k = 0; k < b.models[j].length; k++) {
+				if(b.models[j][k].param.gamma == b.gammas[0]) {
+					
+				}
+
+			}
+		}*/
 		/**
 		 * write models into the model file.
 		 */
-		//BoostingSVM b = new BoostingSVM(new File("G:\\sin-models\\concept_346\\"), new File("G:\\sin-models\\Visual_Concept_List.txt"),346);
-		//b.writeModels(new File("G:\\sin-models\\concept346.models"));
+		BoostingSVM b = new BoostingSVM(new File("\\\\mmdb\\e$\\SIN12\\model\\SIN12-MED12\\SVM\\sift-csift-layer20-label11\\"), new File("\\\\mmdb\\e$\\SIN12\\model\\Visual_Concept_List.txt"),346);
+		b.writeModels(new File("\\\\mmdb\\e$\\SIN12\\model\\SIN12-MED12\\SVM\\med12-2in1-20layer-11label-concept346.models"));
 		
 		
 		
