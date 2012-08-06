@@ -49,6 +49,7 @@ public class PredictionMapper {
 		private Path[] pathes;					
 		private String buffer;					//the directory of the buffer
 		private int row_a;						//the number of row in A matrix
+		private String kernel_type;				//kernel type
 		public boolean debug = true;			
 	
 	
@@ -61,14 +62,29 @@ public class PredictionMapper {
 				if(debug)	logger.info("memory for reducer:" + job.getMemoryForReduceTask() +"\r\n");
 				row_a = Integer.parseInt(job.get("row_a"));
 				pathes = this.topathes(job.get("in_a_pathes"));
+				
 				buffer = job.get("kernelmatrix_buffer");
+				
+				
+				kernel_type = job.get("kernel_type");
 				if(debug)	logger.info("row_a:" + row_a +"\r\n");
 				if(debug)	logger.info("pathes[0]:" + pathes[0] +"\r\n");
 				if(debug)	logger.info("pathes[pathes.length-1]:" + pathes[pathes.length-1] +"\r\n");
-
+				if(debug)   logger.info("kernel_type:" + kernel_type +"\r\n");
+				
+				if(!kernel_type.equals("chi2") && !kernel_type.equals("rbf")) {
+					logger.info("Unknown kernel type\r\n");
+					logger.info("kernel_type:" + kernel_type +"\r\n");
+					System.exit(1);
+				}
+				
 				fs = FileSystem.get(job);
 				calculator = new KernelCalculator();
 				if(debug)	printMemory();
+				
+				
+				
+				
 			
 				
 			} catch (IOException e) {
@@ -150,7 +166,11 @@ public class PredictionMapper {
 			for(int p = 0  ; p < pathes.length ; p++) {
 				loadAMatrix(pathes[p]);		//load A block
 				for(int i = 0 ; i < input.length ; i++) {
-					small[i] = calculator.chi2LeiWithZeros(inputB[i]);			//calculate the kernel	
+					if(kernel_type.equals("chi2"))
+						small[i] = calculator.chi2LeiWithZeros(inputB[i]);			//calculate the kernel
+					else if(kernel_type.equals("rbf"))
+						small[i] = calculator.rbf(inputB[i]);			//calculate the kernel
+						
 				}
 				if(p == 0) a_chunk_size = small[0].length;			//record the chunk size of a by recording the line number of the first file
 				reporter.setStatus("<br>\n I am still alive. Don't kill me...");
@@ -316,21 +336,16 @@ public class PredictionMapper {
 		//System.out.println(in_a_pathes);
 		
         conf.set("in_a_pathes", in_a_pathes);
-        conf.set("mapred.child.java.opts", "-Xmx2048m");
-		//conf.set("mapred.child.java.opts", "-Xmx1024m");		//cannot be too large <2000m
-		//conf.set("mapred.map.java.opts", "-Xmx1024m");
-			
+    	conf.set("mapred.child.java.opts", "-Xmx1200m");		//cannot be too large <2000m
 		
-		conf.set("mapred.cluster.map.memory.mb","4096");
-		//conf.set("mapred.cluster.map.memory.mb","2048");
-		//conf.set("mapred.cluster.reduce.memory.mb","2048");
-		conf.set("mapred.job.map.memory.mb", "4096");
+		conf.set("mapred.cluster.map.memory.mb","2000");
+		conf.set("mapred.cluster.reduce.memory.mb","2000");
 		
-		conf.set("mapred.cluster.map.memory.mb","4096");
-		//conf.set("mapred.job.map.memory.mb","2048");
-		conf.set("mapred.job.reduce.memory.mb","4096");
-		//conf.set("mapred.tasktracker.map.tasks.maximum","16");
-		conf.set("mapred.map.max.attempts","64");
+		conf.set("mapred.job.map.memory.mb","2000");
+		conf.set("mapred.job.reduce.memory.mb","2000");
+		conf.set("mapred.tasktracker.map.tasks.maximum","1");
+		conf.set("mapred.map.max.attempts","8");
+		conf.set("mapred.reduce.max.attempts","8");
 			
 		conf.setJobName("cascade-svm-kernel-computer");
 			
@@ -353,8 +368,12 @@ public class PredictionMapper {
 		//String thispathname = pathes.get(i).toString();
 		//int iteration_num = Integer.parseInt(thispathname.substring(thispathname.indexOf("inpart")+"inpart".length(), thispathname.lastIndexOf("-")));
 		FileInputFormat.setInputPaths(conf, new Path(b_feature_sequence_file));
-		
-		FileOutputFormat.setOutputPath(conf, new Path("out"+File.separator+1688));;
+		FileOutputFormat.setOutputPath(conf, new Path(args[4]));
+		if(args.length ==6) {
+			conf.set("kernel_type", args[5].toLowerCase());
+		} else {
+			conf.set("kernel_type", "chi2");
+		}
 		JobClient.runJob(conf);
 		
 
