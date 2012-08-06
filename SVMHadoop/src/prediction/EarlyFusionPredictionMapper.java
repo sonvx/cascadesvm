@@ -345,8 +345,8 @@ public class EarlyFusionPredictionMapper {
 		conf.set("mapred.job.map.memory.mb","2000");
 		conf.set("mapred.job.reduce.memory.mb","2000");
 		conf.set("mapred.tasktracker.map.tasks.maximum","1");
-		conf.set("mapred.map.max.attempts","8");
-		conf.set("mapred.reduce.max.attempts","8");
+		conf.set("mapred.map.max.attempts","32");
+		conf.set("mapred.reduce.max.attempts","32");
 			
 		conf.setJobName("cascade-svm-kernel-fusion");
 			
@@ -359,7 +359,7 @@ public class EarlyFusionPredictionMapper {
 			
 		conf.setMapperClass(SVMHadoopMapper.class);
 		conf.setReducerClass(SVMHadoopReducer.class);
-		conf.setNumMapTasks(500);
+		conf.setNumMapTasks(2000);
 		conf.setNumReduceTasks(1);
 			
 		conf.setInputFormat(SequenceFileInputFormat.class);
