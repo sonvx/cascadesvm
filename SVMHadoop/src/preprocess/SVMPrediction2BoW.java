@@ -34,9 +34,9 @@ public class SVMPrediction2BoW {
 					int idinfeafile = -1;
 					if(fealine.indexOf(" ") == -1) {
 						System.out.println("empty line @" + fealine);
-						idinfeafile = Integer.parseInt(fealine);
+						idinfeafile = (int)Double.parseDouble(fealine);
 					} else {
-						idinfeafile = Integer.parseInt(fealine.substring(0, fealine.indexOf(" ")));
+						idinfeafile = (int)Double.parseDouble(fealine.substring(0, fealine.indexOf(" ")));
 						
 					}
 					
@@ -114,10 +114,10 @@ public class SVMPrediction2BoW {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		String dir = "E:\\SIN12\\MED12\\prediction\\med12dev";
-		File prediction = new File(dir, "med12dev.txt");
-		File idlist = new File(dir, "med12.dev.idlist");
-		File outdir = new File(dir, "spbof");
+		String dir = "\\\\aladdin3\\c$\\User_Data\\lujiang\\SIN12\\MED12";
+		File prediction = new File(dir, "original.txt");
+		File idlist = new File(dir, "med11.dev.idlist");
+		File outdir = new File(dir, "original");
 		
 		SVMPrediction2BoW svm = new SVMPrediction2BoW();
 		svm.gen(prediction, idlist, outdir, 346);
