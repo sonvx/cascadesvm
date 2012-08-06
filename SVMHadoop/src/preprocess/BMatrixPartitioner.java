@@ -111,15 +111,15 @@ public class BMatrixPartitioner {
 	}
 	 
 	public static void main(String[] args) throws Exception {
-		if(args == null ||  args.length != 5) {
+		if(args == null) {
 			String help = "chunk A into files\n"
 					+ "  partition(File indir, File idlist, File outdir, int chunksize, String filenameprefix)\n";
 			System.out.print(help);
 			System.exit(1);
 		}
 		BMatrixPartitioner par = new BMatrixPartitioner();
-		par.partition(new File(args[0]), new File(args[1]), new File(args[2]), Integer.parseInt(args[3]), args[4]);
-		//par.partition(new File(args[0]), new File(args[1]), Integer.parseInt(args[2]), args[3]);
+		//par.partition(new File(args[0]), new File(args[1]), new File(args[2]), Integer.parseInt(args[3]), args[4]);
+		par.partition(new File(args[0]), new File(args[1]), Integer.parseInt(args[2]), args[3]);
 
 	}
 
