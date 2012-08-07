@@ -50,7 +50,7 @@ public class AMatrixPartitioner {
 			{
 				String[] temps = idline.split(" ");
 				
-				File tfn = new File(indir, temps[0]+".spbof");
+				File tfn = new File(indir, temps[0]);
 				
 				BufferedReader tbr = new BufferedReader(new InputStreamReader(new FileInputStream(tfn)));
 				line = tbr.readLine();
