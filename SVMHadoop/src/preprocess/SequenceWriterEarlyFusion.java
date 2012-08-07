@@ -81,7 +81,7 @@ public class SequenceWriterEarlyFusion {
 					}
 					String cur_filename = filename_buffer.get(filename_id_index + q);
 					int cur_id = id_buffer.get(filename_id_index + q);
-					File nextf = new File(dirs[p], cur_filename+".spbof");
+					File nextf = new File(dirs[p], cur_filename);
 					String svmline = null;
 					if(nextf.exists()){
 						brs[p] = new BufferedReader(new InputStreamReader(new FileInputStream( nextf)),1024*8);
