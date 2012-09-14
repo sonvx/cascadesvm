@@ -1,0 +1,13 @@
+#summary One-sentence summary of this page.
+
+= Found Bug =
+
+1. It may has a bug whiling writing out sequence file. When the total file number can be exactly divided by the chunk size. Using 10 documents and chunk _size to test. -Lu Jiang
+
+
+= Details =
+
+Add your content here.  Format your content with:
+  * Text in *bold* or _italic_
+  * Headings, paragraphs, and lists
+  * Automatic links to other wiki pages
