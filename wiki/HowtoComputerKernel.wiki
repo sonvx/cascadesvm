@@ -1,5 +1,30 @@
 #summary One-sentence summary of this page.
 
+IDlist:
+The first column is the relative location of the feature files and the second column is the ID number.
+shot1_1_RKF.spbof 1
+shot1_2_RKF.spbof 2
+shot1_3_RKF.spbof 3
+shot1_4_RKF.spbof 4
+shot1_5_RKF.spbof 5
+shot1_6_RKF.spbof 6
+shot1_7_RKF.spbof 7
+shot1_8_RKF.spbof 8
+shot1_9_RKF.spbof 9
+
+If the features belonging to the same video are in the same folder, the idlist file looks like
+shot1/shot1_1_RKF.spbof 1
+shot1/shot1_2_RKF.spbof 2
+shot1/shot1_3_RKF.spbof 3
+shot1/shot1_4_RKF.spbof 4
+shot1/shot1_5_RKF.spbof 5
+shot1/shot1_6_RKF.spbof 6
+shot1/shot1_7_RKF.spbof 7
+shot1/shot1_8_RKF.spbof 8
+shot1/shot1_9_RKF.spbof 9
+
+
+
 1) Chunk the feature into a binary A matrix.
 
 java -jar kernel-chunk-short.jar in_feature_dir idlist out_A_matrix_dir the_chunk_size feature_name_prefix
