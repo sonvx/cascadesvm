@@ -21,7 +21,9 @@ java -jar b-sequencewriter.jar in_feature_dir idlist B_out_sequencefilename 300
 java -jar b-sequencewriter.jar feat test.idlist B/small.seq 300
 }}}
 
+
 3) Upload both A and B to Hadoop
+
 4)Run the kernel computer 
 hadoop jar pdl-kernel-computer-short.jar smalltest/new/A smalltest/new/B2 2038 smalltest/new/bufferout2 temp intersection
 
@@ -29,13 +31,3 @@ hadoop dfs -rmr temp
 {{{
 hadoop jar pdl-kernel-computer-short.jar smalltest/new/A smalltest/new/B 2038 smalltest/new/bufferout2 temp intersection
 }}}
-
-
-
-
-= Details =
-
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
