@@ -27,9 +27,16 @@ java -jar b-sequencewriter.jar feat test.idlist B/small.seq 300
 3) Upload both A and B to Hadoop
 
 4)Run the kernel computer 
-hadoop jar pdl-kernel-computer-short.jar smalltest/new/A smalltest/new/B2 2038 smalltest/new/bufferout2 temp intersection
+hadoop jar pdl-kernel-computer-short.jar binary_A_loc sequence_B_loc numrowinA outputdir hadoop_mapreduce_outdir kernelname
+  #binary_A_loc is the location of the uploaded binary A matrix
+  #sequence_B_loc is the location of the uploaded B sequence file dir
+  #numrowinA is the row number of A matrix
+  #outputdir is the output dir for the computed kernels
+  #hadoop_mapreduce_outdir is the dir required by Hadoop.
+  #kernelname is the name of kernel. Supported kernels: intersection, chi2
 
-hadoop dfs -rmr temp
+
 {{{
+hadoop dfs -rmr temp
 hadoop jar pdl-kernel-computer-short.jar smalltest/new/A smalltest/new/B 2038 smalltest/new/bufferout2 temp intersection
 }}}
