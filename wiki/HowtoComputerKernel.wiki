@@ -47,7 +47,7 @@ java -jar b-sequencewriter.jar in_feature_dir idlist B_out_sequencefilename 300
   #in_feature_dir is the dir containing the input features
   #idlist is the given idlist.
   #B_out_sequencefilename is the name of the output sequence file
-  #300 is the chunk size
+  # 300 is the chunk size
 {{{
 java -jar b-sequencewriter.jar feat test.idlist B/small.seq 300
 }}}
