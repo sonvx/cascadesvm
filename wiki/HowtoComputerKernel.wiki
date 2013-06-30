@@ -32,10 +32,10 @@ shot1/shot1_9_RKF.spbof 9
 1) Chunk the feature into a binary A matrix.
 
 java -jar kernel-chunk-short.jar in_feature_dir idlist out_A_matrix_dir the_chunk_size feature_name_prefix
-  #in_feature_dir is the dir containing the input features
-  #idlist is the given idlist.
-  #out_A_matrix_dir is the dir of output A matrix
-  #the_chunk_size is the size of each chunked A matrix. On PSC this value is 1000
+  # in_feature_dir is the dir containing the input features
+  # idlist is the given idlist.
+  # out_A_matrix_dir is the dir of output A matrix
+  # the_chunk_size is the size of each chunked A matrix. On PSC this value is 1000
   #feature_name_prefix is the prefix of the feature name
 {{{
 java -jar a-chunk-short.jar feat test.idlist A 1000 sift
@@ -44,9 +44,9 @@ java -jar a-chunk-short.jar feat test.idlist A 1000 sift
 2) Write B matrix into the sequence files.
 
 java -jar b-sequencewriter.jar in_feature_dir idlist B_out_sequencefilename 300
-  #in_feature_dir is the dir containing the input features
-  #idlist is the given idlist.
-  #B_out_sequencefilename is the name of the output sequence file
+  # in_feature_dir is the dir containing the input features
+  # idlist is the given idlist.
+  # B_out_sequencefilename is the name of the output sequence file
   # 300 is the chunk size
 {{{
 java -jar b-sequencewriter.jar feat test.idlist B/small.seq 300
@@ -57,12 +57,12 @@ java -jar b-sequencewriter.jar feat test.idlist B/small.seq 300
 
 4)Run the kernel computer 
 hadoop jar pdl-kernel-computer-short.jar binary_A_loc sequence_B_loc numrowinA outputdir hadoop_mapreduce_outdir kernelname
-  #binary_A_loc is the location of the uploaded binary A matrix
-  #sequence_B_loc is the location of the uploaded B sequence file dir
-  #numrowinA is the row number of A matrix
-  #outputdir is the output dir for the computed kernels
-  #hadoop_mapreduce_outdir is the dir required by Hadoop.
-  #kernelname is the name of kernel. Supported kernels: intersection, chi2
+  # binary_A_loc is the location of the uploaded binary A matrix
+  # sequence_B_loc is the location of the uploaded B sequence file dir
+  # numrowinA is the row number of A matrix
+  # outputdir is the output dir for the computed kernels
+  # hadoop_mapreduce_outdir is the dir required by Hadoop.
+  # kernelname is the name of kernel. Supported kernels: intersection, chi2
 
 
 {{{
