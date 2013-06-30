@@ -3,11 +3,11 @@
 1) Chunk the feature into a binary A matrix.
 
 java -jar kernel-chunk-short.jar in_feature_dir idlist out_A_matrix_dir the_chunk_size feature_name_prefix
-•	in_feature_dir is the dir containing the input features
-•	idlist is the given idlist.
-•	out_A_matrix_dir is the dir of output A matrix
-•	the_chunk_size is the size of each chunked A matrix. On PSC this value is 1000
-•	feature_name_prefix is the prefix of the feature name
+#in_feature_dir is the dir containing the input features
+#idlist is the given idlist.
+#out_A_matrix_dir is the dir of output A matrix
+#the_chunk_size is the size of each chunked A matrix. On PSC this value is 1000
+#feature_name_prefix is the prefix of the feature name
 {{{
 java -jar a-chunk-short.jar feat test.idlist A 1000 sift
 }}}
@@ -15,10 +15,10 @@ java -jar a-chunk-short.jar feat test.idlist A 1000 sift
 2) Write B matrix into the sequence files.
 
 java -jar b-sequencewriter.jar in_feature_dir idlist B_out_sequencefilename 300
-•	in_feature_dir is the dir containing the input features
-•	idlist is the given idlist.
-•	B_out_sequencefilename is the name of the output sequence file
-•	300 is fixed!
+#in_feature_dir is the dir containing the input features
+#idlist is the given idlist.
+#B_out_sequencefilename is the name of the output sequence file
+#300 is the chunk size
 {{{
 java -jar b-sequencewriter.jar feat test.idlist B/small.seq 300
 }}}
