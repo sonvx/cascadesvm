@@ -15,7 +15,8 @@ shot1_9_RKF.spbof 9
 }}}
 
 If the features belonging to the same video are in the same folder, the idlist file looks like
-{{{shot1/shot1_1_RKF.spbof 1
+{{{
+shot1/shot1_1_RKF.spbof 1
 shot1/shot1_2_RKF.spbof 2
 shot1/shot1_3_RKF.spbof 3
 shot1/shot1_4_RKF.spbof 4
@@ -25,6 +26,7 @@ shot1/shot1_7_RKF.spbof 7
 shot1/shot1_8_RKF.spbof 8
 shot1/shot1_9_RKF.spbof 9
 }}}
+
 
 
 1) Chunk the feature into a binary A matrix.
