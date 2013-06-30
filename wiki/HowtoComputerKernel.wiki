@@ -1,6 +1,7 @@
 #summary One-sentence summary of this page.
 
 1) Chunk the feature into a binary A matrix.
+
 java -jar kernel-chunk-short.jar in_feature_dir idlist out_A_matrix_dir the_chunk_size feature_name_prefix
 •	in_feature_dir is the dir containing the input features
 •	idlist is the given idlist.
@@ -12,6 +13,7 @@ java -jar a-chunk-short.jar feat test.idlist A 1000 sift
 }}}
 
 2) Write B matrix into the sequence files.
+
 java -jar b-sequencewriter.jar in_feature_dir idlist B_out_sequencefilename 300
 •	in_feature_dir is the dir containing the input features
 •	idlist is the given idlist.
