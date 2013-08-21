@@ -13,6 +13,8 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 
+import linear.svm_linear_model;
+
 
 
 
@@ -38,6 +40,59 @@ public class SVMPrediction {
 			double[] dec_values = new double[nr_class*(nr_class-1)/2];
 			svm_predict_values(model, x, dec_values);
 
+			double min_prob=1e-7;
+			double[][] pairwise_prob=new double[nr_class][nr_class];
+			
+			int k=0;
+			for(i=0;i<nr_class;i++)
+				for(int j=i+1;j<nr_class;j++)
+				{
+					pairwise_prob[i][j]=Math.min(Math.max(sigmoid_predict(dec_values[k],model.probA[k],model.probB[k]),min_prob),1-min_prob);
+					pairwise_prob[j][i]=1-pairwise_prob[i][j];
+					k++;
+				}
+			multiclass_probability(nr_class,pairwise_prob,prob_estimates);
+
+			int prob_max_idx = 0;
+			for(i=1;i<nr_class;i++)
+				if(prob_estimates[i] > prob_estimates[prob_max_idx])
+					prob_max_idx = i;
+			return model.label[prob_max_idx];
+		}
+		return 0;
+	}
+	
+	
+	
+	/**
+	 * add for shicheng's linear model; Only for binary classification
+	 * @param model
+	 * @param infeatvect
+	 * @param prob_estimates
+	 * @return
+	 */
+	public static double svm_linear_predict_probability(svm_linear_model model, float[] infeatvect, double[] prob_estimates)
+	{
+		if ((model.param.svm_type == svm_parameter.C_SVC || model.param.svm_type == svm_parameter.NU_SVC) &&
+		    model.probA!=null && model.probB!=null)
+		{
+			int i;
+			int nr_class = model.nr_class;
+			double[] dec_values = new double[nr_class*(nr_class-1)/2];
+			
+			
+			//calculate dec_values
+			//svm_predict_values(model, x, dec_values);
+			double dotprod = model.rho[0];
+			
+			for(int t = 0 ; t < model.dim ; t++) {
+				dotprod += model.w[t] * infeatvect[t];
+			}
+			
+			//dotprod = Math.exp(dotprod);
+			dec_values[0] = dotprod;
+			
+			
 			double min_prob=1e-7;
 			double[][] pairwise_prob=new double[nr_class][nr_class];
 			
@@ -167,6 +222,33 @@ public class SVMPrediction {
 		return predictions;
 	}
 	
+	
+	
+	
+	
+	public static double linearPredictHadoop(float[] infeatvet, svm_linear_model model) throws IOException
+	{
+		int nr_class=model.nr_class;
+		int[] labels=new int[nr_class];
+		double prediction = 0.0;
+		svm_get_labels(model,labels);
+		
+		double[] prob_estimates=new double[nr_class];
+		svm_linear_predict_probability(model,infeatvet,prob_estimates);
+		for(int j = 0 ; j < nr_class ; j++) {
+			if(labels[j] == 1) {
+				prediction = prob_estimates[j];
+				break;
+			}
+		}
+		
+		return prediction;
+	}
+	
+	
+	
+	
+	
 	public static double predictHadoop(svm_node[] x, svm_model model) throws IOException
 	{
 		int nr_class=model.nr_class;
@@ -198,7 +280,6 @@ public class SVMPrediction {
 		for(int j=0;j<nr_class;j++)
 			output.writeBytes(prob_estimates[j]+" ");
 		output.writeBytes("\n");
-
 			
 	}
 	
@@ -263,6 +344,14 @@ public class SVMPrediction {
 
 	
 	public static void svm_get_labels(svm_model model, int[] label)
+	{
+		if (model.label != null)
+			for(int i=0;i<model.nr_class;i++)
+				label[i] = model.label[i];
+	}
+	
+	
+	public static void svm_get_labels(svm_linear_model model, int[] label)
 	{
 		if (model.label != null)
 			for(int i=0;i<model.nr_class;i++)
@@ -429,6 +518,144 @@ public class SVMPrediction {
 				model.SV[i][j].index = Integer.parseInt(st.nextToken());
 				model.SV[i][j].value = Double.parseDouble(st.nextToken());
 			}
+		}
+
+		fp.close();
+		return model;
+	}
+	
+	
+	/**
+	 * add for shicheng's linear model
+	 * @param in
+	 * @return
+	 * @throws IOException
+	 */
+	public static svm_linear_model svm_load_linear_model(File in) throws IOException
+	{
+		// read parameters
+		BufferedReader fp = new BufferedReader(new FileReader(in));
+		svm_linear_model model = new svm_linear_model();
+		svm_parameter param = new svm_parameter();
+		model.param = param;
+		model.rho = null;
+		model.probA = null;
+		model.probB = null;
+		model.label = null;
+		
+		if(model.nr_class != 2) throw new IOException("Model class not supported. Only binary classifictaion.");
+
+		while(true)
+		{
+			String cmd = fp.readLine();
+			String arg = cmd.substring(cmd.indexOf(' ')+1);
+
+			if(cmd.startsWith("svm_type"))
+			{
+				int i;
+				for(i=0;i<svm_type_table.length;i++)
+				{
+					if(arg.indexOf(svm_type_table[i])!=-1)
+					{
+						param.svm_type=i;
+						break;
+					}
+				}
+				if(i == svm_type_table.length)
+				{
+					System.err.print("unknown svm type.\n");
+					return null;
+				}
+			}
+			else if(cmd.startsWith("kernel_type"))
+			{
+				int i;
+				for(i=0;i<kernel_type_table.length;i++)
+				{
+					if(arg.indexOf(kernel_type_table[i])!=-1)
+					{
+						param.kernel_type=i;
+						break;
+					}
+				}
+				if(i == kernel_type_table.length)
+				{
+					System.err.print("unknown kernel function.\n");
+					return null;
+				}
+			}
+			else if(cmd.startsWith("degree"))
+				param.degree = atoi(arg);
+			else if(cmd.startsWith("gamma"))
+				param.gamma = atof(arg);
+			else if(cmd.startsWith("coef0"))
+				param.coef0 = atof(arg);
+			else if(cmd.startsWith("nr_class"))
+				model.nr_class = atoi(arg);
+			else if(cmd.startsWith("b "))
+			{
+				model.rho = new double[1];
+				StringTokenizer st = new StringTokenizer(arg);
+				model.rho[0] = atof(st.nextToken());
+			}
+			else if(cmd.startsWith("label"))
+			{
+				int n = model.nr_class;
+				model.label = new int[n];
+				StringTokenizer st = new StringTokenizer(arg);
+				for(int i=0;i<n;i++)
+					model.label[i] = atoi(st.nextToken());					
+			}
+			else if(cmd.startsWith("probA"))
+			{
+				int n = model.nr_class*(model.nr_class-1)/2;
+				model.probA = new double[n];
+				StringTokenizer st = new StringTokenizer(arg);
+				for(int i=0;i<n;i++)
+					model.probA[i] = atof(st.nextToken());					
+			} 
+			else if(cmd.startsWith("threshold_recall"))
+			{
+				model.threshold_recall = atof(arg);	
+			} 
+			else if(cmd.startsWith("threshold_precision"))
+			{
+				//do nothing		
+			}
+			else if(cmd.startsWith("probB"))
+			{
+				int n = model.nr_class*(model.nr_class-1)/2;
+				model.probB = new double[n];
+				StringTokenizer st = new StringTokenizer(arg);
+				for(int i=0;i<n;i++)
+					model.probB[i] = atof(st.nextToken());					
+			}
+			else if(cmd.startsWith("dim"))
+			{
+				StringTokenizer st = new StringTokenizer(arg);
+				model.dim = atoi(st.nextToken());
+			}
+			else if(cmd.equals("w"))
+			{
+				break;
+			}
+			else
+			{
+				System.err.print("unknown text in model file: ["+cmd+"]\n");
+				return null;
+			}
+		}
+
+		// read sv_coef and SV
+
+		int l = model.dim;
+	
+		model.w = new double[l];
+		for(int i=0;i<l;i++)
+		{
+			String line = fp.readLine();
+			StringTokenizer st = new StringTokenizer(line," \t\n\r\f:");
+			model.w[i] = atof(st.nextToken());
 		}
 
 		fp.close();
