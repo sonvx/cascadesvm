@@ -86,7 +86,7 @@ public class KernelCalculator {
 	public float[] intersection(KernelRow row) {
 		float[] result =  new float[inmatrix.length];
 		for(int i = 0 ; i < inmatrix.length ; i++) {
-			result[i] = -1 * dotmin(row, inmatrix[i])/2 ;
+			result[i] = dotmin(row, inmatrix[i])/2 ;
 		}
 		return result;
 	}
@@ -421,6 +421,29 @@ public class KernelCalculator {
 		}
 		
 	}
+	
+	
+	public static byte[] toIEEE754Bytes(float in) {
+		int floatBits = Float.floatToIntBits(in);
+		byte floatBytes[] = new byte[4];
+		floatBytes[3] = (byte)(floatBits >> 24);
+		floatBytes[2] = (byte)(floatBits >> 16);
+		floatBytes[1] = (byte)(floatBits >> 8);
+		floatBytes[0] = (byte)(floatBits);
+		return floatBytes;
+	}
+	
+	
+	public static float toIEEE754Float(byte[] in) {
+		int floatbits = (in[0] & 0xFF) | (in[1] & 0xFF) << 8 | (in[2] & 0xFF) << 16 | (in[3] & 0xFF) << 24;
+		return Float.intBitsToFloat(floatbits);
+	}
+	
+	
+	
+	
+	
+	
 	
 
 	
