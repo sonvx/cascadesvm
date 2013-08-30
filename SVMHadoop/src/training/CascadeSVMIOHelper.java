@@ -526,7 +526,27 @@ public class CascadeSVMIOHelper {
 	}
 	
 	/*
+	 * (Hadoop) subset list
+	 */
+	public static void writeSubsetListHadoop(String pathString, ArrayList<String> subsetList) throws IOException {
+		logger.info("[START]writeSubsetListHadoop");
+		Configuration conf = new Configuration();
+		FileSystem fs = FileSystem.get(conf);
+		Path path = new Path(pathString);
+		FSDataOutputStream out = fs.create(path);
+		try {
+			for (int i = 0; i < subsetList.size(); i++) {
+				out.writeUTF(subsetList.get(i));
+				out.writeUTF("\n");
+			}
+		} finally {
+			IOUtils.closeStream(out);
+		}
+		logger.info("[END]writeSubsetListHadoop");
+	} 
+	
+	/*
 	 * 
 	 */
-	public static 
+	
 }
