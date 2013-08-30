@@ -2,9 +2,11 @@ package training;
 
 import java.io.IOException;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.NullOutputFormat;
 
 public class CascadeSVMTrain {
@@ -15,7 +17,7 @@ public class CascadeSVMTrain {
 		String subsetListPath = CascadeSVMPathHelper.getSubsetListPath(CascadeSVMPathHelper.getHadoopWorkDir());
 		conf.set("subsetListPath", subsetListPath);
 		
-		FileInputFormat.addInputPaths(conf, parameter.idlistPath);
+		FileInputFormat.addInputPath(conf, new Path(parameter.idlistPath));
 		
 		conf.setMapperClass(CascadeSVMPartitioner.class);
 		conf.setReducerClass(CascadeSVMPartitioner.class);
@@ -39,19 +41,10 @@ public class CascadeSVMTrain {
 		schedulerParameter.lastSVPath = "";
 		schedulerParameter.subsetListPath = subsetListPath;
 		
-		String schedulerParameterPath = CascadeSVMPathHelper.getSchedulerParameterPath(CascadeSVMPathHelper.getHadoopWorkDir(), 0);
+		String workDir = CascadeSVMPathHelper.getHadoopWorkDir();
+		String schedulerParameterPath = CascadeSVMPathHelper.getSchedulerParameterPath(workDir);
 		CascadeSVMIOHelper.writeSchedulerParameterHadoop(schedulerParameterPath, schedulerParameter);
 		return schedulerParameterPath;
-	}
-	
-	private static void runSchedulerJob(String schedulerParameterPath) throws IOException {
-		JobConf conf = new JobConf(CascadeSVMScheduler.class);
-		conf.setJobName("CascadeSVM Scheduler");
-		FileInputFormat.addInputPaths(conf, schedulerParameterPath);
-		conf.setMapperClass(CascadeSVMScheduler.class);
-		conf.setReducerClass(CascadeSVMScheduler.class);
-		conf.setOutputFormat(NullOutputFormat.class);
-		JobClient.runJob(conf);
 	}
 	
 	public static void main(String[] args) {
@@ -60,7 +53,7 @@ public class CascadeSVMTrain {
 			// subsetListPath = runPartitionerJob(parameter);
 			String subsetListPath = CascadeSVMPartitioner.partitionIdListHadoop(parameter);
 			String schedulerParameterPath = writeSchedulerParameter(parameter, subsetListPath);
-			runSchedulerJob(schedulerParameterPath);
+			CascadeSVMScheduler.runSchedulerJob(schedulerParameterPath);
 		}
 		catch (Exception e) {
 			e.printStackTrace();

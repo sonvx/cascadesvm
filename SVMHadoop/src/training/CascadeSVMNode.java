@@ -8,7 +8,15 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.MapReduceBase;
+import org.apache.hadoop.mapred.Mapper;
+import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.mapred.Reducer;
+import org.apache.hadoop.mapred.Reporter;
 import org.apache.log4j.Logger;
 
 import libsvm.svm;
@@ -17,8 +25,28 @@ import libsvm.svm_node;
 import libsvm.svm_parameter;
 import libsvm.svm_problem;
 
-public class CascadeSVMNode {
+public class CascadeSVMNode extends MapReduceBase 
+		implements Mapper<IntWritable, Text, IntWritable, Text>,
+		Reducer<IntWritable, Text, IntWritable, Text> {
 	private static Logger logger;
+
+	@Override
+	public void map(IntWritable key, Text value,
+			OutputCollector<IntWritable, Text> output, Reporter reporter)
+			throws IOException {
+		
+	}
+	
+	@Override
+	public void reduce(IntWritable key, Iterator<Text> value,
+			OutputCollector<IntWritable, Text> output, Reporter reporter)
+			throws IOException {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	
+	
 	private static double[] tune_parameter; // = {0.125d};
 	private static int randomSeed = 0;
 	static {
@@ -95,31 +123,6 @@ public class CascadeSVMNode {
 		if (verbose) logger.info("[End]readIdList");
 		return idList;
 	}
-	
-	/**
-	 * Assume the label file looks like this: id label
-	 * @param idList
-	 * @param labelFile
-	 * @return
-	 * @throws IOException
-	 */
-//	private double[] readLabel(ArrayList<Integer> idList, BufferedReader labelFile)
-//		throws IOException {
-//		if (verbose) logger.info("[Begin]readLabel");
-//		double[] labels = new double[idList.size()];
-//		String line;
-//		while ((line = labelFile.readLine()) != null) {
-//			String[] valueArray = line.trim().split(" ");
-//			int id = Integer.parseInt(valueArray[0]);
-//			double label = Double.parseDouble(valueArray[1]);
-//			if (idList.contains(id)) {
-//				labels[idList.indexOf(id)] = label;
-//			}
-//		}
-//		labelFile.close();
-//		if (verbose) logger.info("[End]readLabel");
-//		return labels;
-//	}
 
 	private svm_problem convert2SVMProblem(ArrayList<Integer> idList, float[][] kernel, double[] labels) {
 		/*  New training instance for xi:

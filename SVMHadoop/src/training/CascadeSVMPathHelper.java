@@ -13,7 +13,7 @@ public class CascadeSVMPathHelper {
 	
 	public static String getSubsetListPath(String dir) {
 		Date d = new Date();
-		return dir + "/subset." + Long.toString(d.getTime()) + ".list";
+		return dir + "/subset.list." + Long.toString(d.getTime());
 	}
 	
 	public static String getModelPath(String dir, int iter, int id) {
@@ -28,8 +28,14 @@ public class CascadeSVMPathHelper {
 		return dir + "/LD." + Integer.toString(iter) + "." + Integer.toString(id);
 	}
 	
-	public static String getSchedulerParameterPath(String dir, int iter) {
-		return dir + "/Scheduler.Parameter." + Integer.toString(iter); 
+	public static String getSchedulerParameterPath(String dir) {
+		Date d = new Date();
+		return dir + "/scheduler.parameter." + Long.toString(d.getTime()); 
+	}
+	
+	public static String getNodeParameterPath(String dir) {
+		Date d = new Date();
+		return dir + "/node.parameter." + Long.toString(d.getTime());
 	}
 	
 	public static String getHadoopWorkDir() {
