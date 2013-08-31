@@ -107,6 +107,35 @@ public class CascadeSVMIOHelper {
 		if (verbose) logger.info("[END]writeIdListHadoop");
 	}
 	
+	/*  New training instance for xi:
+	 * <label> 0:i 1:K(xi,x1) ... L:K(xi,xL) 
+	 * New testing instance for any x:
+	 * <label> 0:? 1:K(x,x1) ... L:K(x,xL) 
+	 * That is, in the training file the first column must be the "ID" of
+	 * xi. In testing, ? can be any value.
+	 * Shicheng: So... we can use id here?
+	 * Shicheng: No, we can't. We should use sequential id start from 1
+	 * So, the id of support vector should be convert into the original id when print them.
+	 */
+	public static void writeSVIdListHadoop(String pathString, svm_model model, ArrayList<Integer> idList) throws IOException {
+		Configuration conf = new Configuration();
+		FileSystem fs = FileSystem.get(new Configuration());
+		Path path = new Path(pathString);
+		SequenceFile.Writer writer = null;
+		IntWritable key = new IntWritable();
+		IntWritable value = new IntWritable();
+		try {
+			writer = SequenceFile.createWriter(fs, conf, path, key.getClass(), value.getClass());
+			for (int i = 0; i < idList.size(); i++) {
+				key.set(i);
+				value.set(idList.get((int)model.SV[i][0].value - 1));
+				writer.append(key, value);
+			}
+		} finally {
+			IOUtils.closeStream(writer);
+		}
+	} 
+	
 	/*
 	 * (Local) Idlist
 	 * One id per line.
