@@ -28,7 +28,6 @@ import org.apache.hadoop.io.SequenceFile.Writer;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Logger;
 
-// TODO: How to get FileSystem?
 public class CascadeSVMIOHelper {
 	public static Logger logger = Logger.getLogger(CascadeSVMIOHelper.class);
 	
