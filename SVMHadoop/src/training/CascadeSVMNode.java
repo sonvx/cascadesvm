@@ -8,6 +8,7 @@ import java.util.Iterator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
@@ -25,13 +26,11 @@ import local.KernelProjector;
 
 public class CascadeSVMNode extends MapReduceBase 
 		implements Mapper<IntWritable, Text, IntWritable, Text>,
-		Reducer<IntWritable, Text, IntWritable, Text> {
-	private static boolean verbose;
+		Reducer<IntWritable, Text, NullWritable, NullWritable> {
 	private static Logger logger;
 	private static double[] tune_parameter; // = {0.125d};
 	private static int randomSeed;
 	static {
-		verbose = true;
 		logger = Logger.getLogger(CascadeSVMNode.class);
 		tune_parameter = new double[11];
 		for (int i = -10; i <= 10; i += 2)
@@ -43,6 +42,7 @@ public class CascadeSVMNode extends MapReduceBase
 	public void map(IntWritable key, Text value,
 			OutputCollector<IntWritable, Text> output, Reporter reporter)
 			throws IOException {
+		logger.info("[START]CascadeSVMNode.map()");
 		CascadeSVMNodeParameter parameter = null;
 		try {
 			parameter = new CascadeSVMNodeParameter(value.toString());
@@ -50,52 +50,60 @@ public class CascadeSVMNode extends MapReduceBase
 			return ;
 		}
 		svm.rand.setSeed(randomSeed);
+		
+		reporter.setStatus("read id list");
 		ArrayList<Integer> idList = CascadeSVMIOHelper.readIdListHadoop(parameter.idlistPath);
+		
+		reporter.setStatus("read label");
 		double[] labels = CascadeSVMIOHelper.readLabelHadoop(parameter.labelPath, idList);
-		float[][] kernel = projectKernelHadoop(parameter, idList);						        // project kernel
-		svm_problem problem = convert2SVMProblem(idList, kernel, labels);									// create svm problem
+		
+		reporter.setStatus("project kernel");
+		float[][] kernel = projectKernelHadoop(parameter, idList);
+		
+		reporter.setStatus("create problem");
+		svm_problem problem = createSVMProblem(idList, kernel, labels);
+		
 		kernel = null; // GC
-		svm_parameter param = crossValidation(problem, parameter.nFold, randomSeed);						// cross validation
-		svm_model model = svm.svm_train(problem, param); 													// train
+		
+		reporter.setStatus("cross validation");
+		svm_parameter param = crossValidation(problem, parameter.nFold, randomSeed);
+		
+		reporter.setStatus("svm train");
+		svm_model model = svm.svm_train(problem, param);
+		
+		reporter.setStatus("write model");
 		CascadeSVMIOHelper.writeModelHadoop(parameter.modelPath, model);
+		
+		reporter.setStatus("write support vector");
 		CascadeSVMIOHelper.writeSVIdListHadoop(parameter.SVPath, model, idList);
+		
+		reporter.setStatus("write LD");
 		double LD = computeLD(model, problem);
 		CascadeSVMIOHelper.writeLDHadoop(parameter.LDPath, LD);
+		
+		output.collect(new IntWritable(0), new Text("done."));
+		logger.info("[END]CascadeSVMNode.map()");
 	}
 	
 	@Override
 	public void reduce(IntWritable key, Iterator<Text> value,
-			OutputCollector<IntWritable, Text> output, Reporter reporter)
+			OutputCollector<NullWritable, NullWritable> output, Reporter reporter)
 			throws IOException {
 		// Nothing to do.
 	}
 	
-	public static float[][] projectKernelHadoop(CascadeSVMNodeParameter parameter, ArrayList<Integer> idList) throws IOException {
+	public float[][] projectKernelHadoop(CascadeSVMNodeParameter parameter, ArrayList<Integer> idList) throws IOException {
+		logger.info("[START]CascadeSVMNode.projectKernelHadoop()");
 		KernelProjector projector = new KernelProjector();
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
-		float[][] kernel = projector.projectHadoop(fs, parameter.kernelPath, idList, parameter.dimension);
+		float[][] kernel = projector.projectHadoop(fs, parameter.kernelPath, idList, parameter.nData);
+		logger.info("[END]CascadeSVMNode.projectKernelHadoop()");
 		return kernel;
 	} 
-	
-	public static double computeLD(svm_model model, svm_problem problem) {
-		if (verbose) logger.info("[Begin]Compute LD");
-		double LD = 0;
-		int[] sv_indices = new int[model.l];
-		for (int i = 0; i < model.l; i++) {
-			sv_indices[i] = (int)model.SV[i][0].value - 1; // sv id starts from 1
-			LD += model.sv_coef[0][i] * problem.y[sv_indices[i]] * model.label[0]; // [BUG FIX]: Sometimes the label will be -1 1, need to multiply -1 to ensure the right sign for sv_coef
-		}
-		for (int i = 0; i < model.l; i++)
-			for (int j = 0; j < model.l; j++) {
-				LD = LD - 0.5 * model.sv_coef[0][i] * model.sv_coef[0][j] * problem.x[sv_indices[i]][sv_indices[j]+1].value;
-			}
-		if (verbose) logger.info("[End]Compute LD");
-		return LD;
-	}
 
-	public static svm_problem convert2SVMProblem(ArrayList<Integer> idList, float[][] kernel, double[] labels) {
-		if (verbose) logger.info("[Start]convert2SVMProblem");
+	public svm_problem createSVMProblem(ArrayList<Integer> idList, float[][] kernel, double[] labels) {
+		logger.info("[START]CascadeSVMNode.createSVMProblem");
 		svm_problem prob = new svm_problem();
 		
 		prob.l = kernel.length;
@@ -114,14 +122,14 @@ public class CascadeSVMNode extends MapReduceBase
 		}
 		
 		prob.y = labels;
-		if (verbose) logger.info("[End]convert2SVMProblem");
+		logger.info("[END]CascadeSVMNode.createSVMProblem");
 		return prob;
 	}
-	
-	public static svm_parameter crossValidation(svm_problem problem, int nrFold, double randomSeed) {
-		 if (verbose) logger.info("[Start]crossValidation");
+
+	@SuppressWarnings("unchecked")
+	public svm_parameter crossValidation(svm_problem problem, int nrFold, double randomSeed) {
+		 logger.info("[START]CascadeSVMNode.crossValidation()");
 		 double[] target = new double[problem.y.length];
-		 @SuppressWarnings("unchecked")
 		 ArrayList<Double>[] probabilities = new ArrayList[problem.l+1];
 		 for (int i = 0; i < problem.l + 1; i++)
 			 probabilities[i] = new ArrayList<Double>();
@@ -137,8 +145,8 @@ public class CascadeSVMNode extends MapReduceBase
 			 for (int j = 0; j < tune_parameter.length; j++) {
 				 parameter.C = tune_parameter[i];
 				 svm.svm_cross_validation(problem, parameter, nrFold, target, probabilities);
-				 if (verbose) logger.info("probabilities[0]" + probabilities[0].toString());
-				 if (verbose) logger.info("probabilities[1]" + probabilities[1].toString());
+				 // logger.info("probabilities[0]" + probabilities[0].toString());
+				 // logger.info("probabilities[1]" + probabilities[1].toString());
 				 double map = computeAveragePrecision(problem.y, probabilities);
 				 if (map > bestMap)
 				 {
@@ -153,8 +161,56 @@ public class CascadeSVMNode extends MapReduceBase
 		 changeProblem(problem, scale);
 		 svm_parameter bestParameter = getDefaultParams();
 		 bestParameter.C = bestC;
-		 if (verbose) logger.info("[End]crossValidation");
+		 logger.info("[END]CascadeSVMNode.crossValidation()");
 		 return bestParameter;
+	}
+	
+	public double computeLD(svm_model model, svm_problem problem) {
+		logger.info("[START]CascadeSVMNode.computeLD()");
+		double LD = 0;
+		int[] sv_indices = new int[model.l];
+		for (int i = 0; i < model.l; i++) {
+			sv_indices[i] = (int)model.SV[i][0].value - 1; // sv id starts from 1
+			LD += model.sv_coef[0][i] * problem.y[sv_indices[i]] * model.label[0]; // [BUG FIX]: Sometimes the label will be -1 1, need to multiply -1 to ensure the right sign for sv_coef
+		}
+		for (int i = 0; i < model.l; i++)
+			for (int j = 0; j < model.l; j++) {
+				LD = LD - 0.5 * model.sv_coef[0][i] * model.sv_coef[0][j] * problem.x[sv_indices[i]][sv_indices[j]+1].value;
+			}
+		logger.info("[START]CascadeSVMNode.computeLD()");
+		return LD;
+	}
+	
+
+	
+	public svm_parameter getDefaultParams() {
+		svm_parameter param = new svm_parameter();
+		param.svm_type = svm_parameter.C_SVC;
+		param.kernel_type = svm_parameter.PRECOMPUTED;
+		param.degree = 3;
+		param.gamma = 0.125;	// 1/num_features, don't make it zero...
+		param.coef0 = 0;
+		param.nu = 0.5;
+		param.cache_size = 100;
+		param.C = 1;
+		param.eps = 1e-3;
+		param.p = 0.1;
+		param.shrinking = 1;
+		param.probability = 1;
+		param.nr_weight = 0;
+		param.weight_label = new int[0];
+		param.weight = new double[0];
+		return param;
+	}
+	
+	public void changeProblem(svm_problem prob, double scale) {
+		logger.info("[START]CascadeSVMNode.changeProblem()");
+		for (int i = 0; i < prob.x.length; i++) {
+			for (int j = 1; j < prob.x[i].length; j++) {
+				prob.x[i][j].value = Math.exp(Math.log1p(prob.x[i][j].value - 1) * scale);
+			}
+		}
+		logger.info("[End]CascadeSVMNode.changeProblem()");
 	}
 	
 	/**
@@ -166,8 +222,8 @@ public class CascadeSVMNode extends MapReduceBase
 	 * @param probabilities
 	 * @return
 	 */
-	public static double computeAveragePrecision(double[] label, ArrayList<Double>[] probabilities) {
-		if (verbose) logger.info("[Start]computeAveragePrecision");
+	public double computeAveragePrecision(double[] label, ArrayList<Double>[] probabilities) {
+		logger.info("[START]CascadeSVMNode.computeAveragePrecision()");
 		int labelIndex = 0;
 		if (probabilities[0].get(1) == 1) {
 			labelIndex = 1;
@@ -187,41 +243,12 @@ public class CascadeSVMNode extends MapReduceBase
 			map += calculateAP(CrossValidationItemBySorts.get(i))[0];
 		}
 		map /= CrossValidationItemBySorts.size();
-		if (verbose) logger.info("[End]computeAveragePrecision");
+		logger.info("[END]CascadeSVMNode.computeAveragePrecision()");
 		return map;
 	}
-	
-	public static void changeProblem(svm_problem prob, double scale) {
-		if (verbose) logger.info("[Start]changeProblem");
-		for (int i = 0; i < prob.x.length; i++) {
-			for (int j = 1; j < prob.x[i].length; j++) {
-				prob.x[i][j].value = Math.exp(Math.log1p(prob.x[i][j].value - 1) * scale);
-			}
-		}
-		if (verbose) logger.info("[End]changeProblem");
-	}
-	
-	public static svm_parameter getDefaultParams() {
-		svm_parameter param = new svm_parameter();
-		param.svm_type = svm_parameter.C_SVC;
-		param.kernel_type = svm_parameter.PRECOMPUTED;
-		param.degree = 3;
-		param.gamma = 0.125;	// 1/num_features, don't make it zero...
-		param.coef0 = 0;
-		param.nu = 0.5;
-		param.cache_size = 100;
-		param.C = 1;
-		param.eps = 1e-3;
-		param.p = 0.1;
-		param.shrinking = 1;
-		param.probability = 1;
-		param.nr_weight = 0;
-		param.weight_label = new int[0];
-		param.weight = new double[0];
-		return param;
-	}
 
-	public static double[] calculateAP(ArrayList<CrossValidationItem> crossValidationItems) {
+	public double[] calculateAP(ArrayList<CrossValidationItem> crossValidationItems) {
+		logger.info("[START]CascadeSVMNode.calculateAP()");
 		double[] result = new double[2];
 		result[0] = 0;
 		result[1] = -1;
@@ -243,6 +270,7 @@ public class CascadeSVMNode extends MapReduceBase
 				result[0] += cur_precision*deltaRecall;
 			}
 		}
+		logger.info("[END]CascadeSVMNode.calculateAP()");
 		return result;
 	}
 	

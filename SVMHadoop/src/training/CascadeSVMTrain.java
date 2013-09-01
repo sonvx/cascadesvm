@@ -2,32 +2,10 @@ package training;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.SequenceFileInputFormat;
-import org.apache.hadoop.mapred.lib.NullOutputFormat;
+import org.apache.log4j.Logger;
 
 public class CascadeSVMTrain {
-	private static String runPartitionerJob(CascadeSVMTrainParameter parameter) throws IOException {
-		JobConf conf = new JobConf(CascadeSVMPartitioner.class);
-		conf.setJobName("CascadeSVM Partitioner");
-		conf.set("nSubset", Integer.toString(parameter.nSubset));
-		String subsetListPath = CascadeSVMPathHelper.getSubsetListPath(CascadeSVMPathHelper.getHadoopWorkDir());
-		conf.set("subsetListPath", subsetListPath);
-		
-		FileInputFormat.addInputPath(conf, new Path(parameter.idlistPath));
-		
-		conf.setMapperClass(CascadeSVMPartitioner.class);
-		conf.setReducerClass(CascadeSVMPartitioner.class);
-		
-		conf.setOutputFormat(NullOutputFormat.class);
-		
-		JobClient.runJob(conf);
-		return subsetListPath;
-	}
-	
+	public static Logger logger = Logger.getLogger(CascadeSVMTrain.class);
 	/**
 	 * @param trainParameter
 	 * @param subsetListPath
@@ -35,28 +13,34 @@ public class CascadeSVMTrain {
 	 * @throws IOException 
 	 */
 	private static String writeSchedulerParameter(CascadeSVMTrainParameter trainParameter, String subsetListPath) throws IOException {
+		logger.info("[BEGIN]CascadeSVMTrain.writeSchedulerParameter()");
 		CascadeSVMSchedulerParameter schedulerParameter = new CascadeSVMSchedulerParameter(trainParameter);
-		schedulerParameter.iterationId = 0;
+		schedulerParameter.iterationId = 1;
 		schedulerParameter.lastLD = 0;
-		schedulerParameter.lastSVPath = "";
+		schedulerParameter.lastSVPath = null;
 		schedulerParameter.subsetListPath = subsetListPath;
 		
-		String workDir = CascadeSVMPathHelper.getHadoopWorkDir();
-		String schedulerParameterPath = CascadeSVMPathHelper.getSchedulerParameterPath(workDir);
+		String schedulerParameterPath = CascadeSVMPathHelper.getSchedulerParameterPath(trainParameter.workDir);
 		CascadeSVMIOHelper.writeSchedulerParameterHadoop(schedulerParameterPath, schedulerParameter);
+		logger.info("[END]CascadeSVMTrain.writeSchedulerParameter()");
 		return schedulerParameterPath;
 	}
 	
 	public static void main(String[] args) {
+		logger.info("[BEGIN]CascadeSVMTrain.main()");
 		try {
-			CascadeSVMTrainParameter parameter = CascadeSVMTrainParameter.parseArgs(args);
+			CascadeSVMTrainParameter parameter = new CascadeSVMTrainParameter(args);
 			// subsetListPath = runPartitionerJob(parameter);
 			String subsetListPath = CascadeSVMPartitioner.partitionIdListHadoop(parameter);
 			String schedulerParameterPath = writeSchedulerParameter(parameter, subsetListPath);
 			CascadeSVMScheduler.runSchedulerJob(schedulerParameterPath);
 		}
+		catch (CascadeSVMParameterFormatError e) {
+			logger.info(e.toString());
+		} 
 		catch (Exception e) {
 			e.printStackTrace();
 		}
+		logger.info("[END]CascadeSVMTrain.main()");
 	}
 }
