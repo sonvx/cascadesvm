@@ -1,16 +1,26 @@
 package training;
 
 import java.io.File;
-import java.io.FileReader;
 import java.util.Date;
 
-import org.apache.hadoop.mapred.JobConf;
-
 public class CascadeSVMPathHelper {
+	/**
+	 * ${workDir}/subset.1.0
+	 * @param dir
+	 * @param iter
+	 * @param id
+	 * @return
+	 */
 	public static String getIdListPath(String dir, int iter, int id) {
 		return dir + "/subset." + Integer.toString(iter) + "." + Integer.toString(id);
 	}
 	
+	/**
+	 * @param dir
+	 * @return
+	 */
+	// All methods with Date should be called only once. 
+	// Singleton
 	public static String getSubsetListPath(String dir) {
 		Date d = new Date();
 		return dir + "/subset.list." + Long.toString(d.getTime());
@@ -36,11 +46,6 @@ public class CascadeSVMPathHelper {
 	public static String getNodeParameterPath(String dir) {
 		Date d = new Date();
 		return dir + "/node.parameter." + Long.toString(d.getTime());
-	}
-	
-	public static String getHadoopWorkDir() {
-		JobConf conf = new JobConf();
-		return conf.get("hadoop.tmp.dir");
 	}
 	
 	public static String getLocalWorkDir() {
