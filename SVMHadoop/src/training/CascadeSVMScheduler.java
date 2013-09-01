@@ -235,7 +235,6 @@ public class CascadeSVMScheduler extends MapReduceBase
 	
 	
 	/* Local method
-	 * TODO: Need to be cleaned up and completed.
 	 */
 	
 //	public static String mergeSVIntoSubsets(String subsetListPath, String SVPath, String outputDir) 
@@ -303,7 +302,6 @@ public class CascadeSVMScheduler extends MapReduceBase
 //					finishIds.remove(0);
 //					runningIds.add(new Integer(i));
 //				}
-//				// TODO: Start new Cascade SVM job
 //				// Local verbose:
 //				(new Thread(new FakeSubmitJob(param.kernelPath, param.labelPath, mergedListPath, 5, workDir))).start();
 //			}
