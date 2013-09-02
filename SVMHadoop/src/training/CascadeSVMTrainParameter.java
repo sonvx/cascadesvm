@@ -5,7 +5,6 @@ public class CascadeSVMTrainParameter {
 	public String kernelPath;
 	public String labelPath;
 	public String idlistPath;
-	public int nData;
 	public String workDir;
 	// optional
 	public int nSubset;
@@ -13,10 +12,10 @@ public class CascadeSVMTrainParameter {
 	public double epsilon;
 	public int max_iter;
 	
-	public static int parameterSize = 5;
+	public static int parameterSize = 4;
 	
 	public static String helpText = 
-			"Usage: CascadeSVMTrain [options] kernel_path label_path idlist_path data_size work_directory\n" +
+			"Usage: CascadeSVMTrain [options] kernel_path label_path idlist_path work_directory\n" +
 			"-n nSubset  : the size of the splitted subset (default 8)\n" +
 			"-v nFold    : the fold of cross validation (default 5)\n" +
 			"-e epsilon  : stopping criteria (default 1e-5)\n" +
@@ -26,7 +25,6 @@ public class CascadeSVMTrainParameter {
 			String kernelPath, 
 			String labelPath, 
 			String idlistPath,
-			int nData,
 			String workDir, 
 			int nSubset, 
 			int nFold,
@@ -35,7 +33,6 @@ public class CascadeSVMTrainParameter {
 		this.kernelPath = kernelPath;
 		this.labelPath  = labelPath;
 		this.idlistPath = idlistPath;
-		this.nData      = nData;
 		this.workDir  = workDir;
 		this.nSubset    = nSubset;
 		this.nFold      = nFold;
@@ -53,7 +50,6 @@ public class CascadeSVMTrainParameter {
 		this.kernelPath = kernelPath;
 		this.labelPath  = labelPath;
 		this.idlistPath = idlistPath;
-		this.nData      = nData;
 		this.workDir  = workDir;
 	}
 	
@@ -69,7 +65,6 @@ public class CascadeSVMTrainParameter {
 				parameter.kernelPath,
 				parameter.labelPath,
 				parameter.idlistPath,
-				parameter.nData,
 				parameter.workDir,
 				parameter.nSubset,
 				parameter.nFold,
@@ -101,8 +96,7 @@ public class CascadeSVMTrainParameter {
 		kernelPath = args[i];
 		labelPath  = args[i+1];
 		idlistPath = args[i+2];
-		nData      = Integer.parseInt(args[i+3]);
-		workDir  = args[i+4];
+		workDir    = args[i+3];
 	}
 	
 	public CascadeSVMTrainParameter(String argsLine) 
@@ -111,8 +105,7 @@ public class CascadeSVMTrainParameter {
 	}
 
 	public String toString() {
-		return kernelPath + " " + labelPath + " " + idlistPath + " " + Integer.toString(nData) + " " +
-				workDir + " " + Integer.toString(nSubset) + " " + Integer.toString(nFold) + " " +
-				Double.toString(epsilon) + " " + Integer.toString(max_iter);
+		return kernelPath + " " + labelPath + " " + idlistPath + " " + workDir + " " + 
+				Integer.toString(nSubset) + " " + Integer.toString(nFold) + " " + Double.toString(epsilon) + " " + Integer.toString(max_iter);
 	}
 }

@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 //import java.util.Iterator;
 
+
 import libsvm.svm_model;
 import libsvm.svm_node;
 import libsvm.svm_parameter;
@@ -20,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
@@ -31,6 +33,25 @@ import org.apache.log4j.Logger;
 public class CascadeSVMIOHelper {
 	public static Logger logger = Logger.getLogger(CascadeSVMIOHelper.class);
 	
+	public static int getIdListSizeHadoop(String pathString) throws IOException {
+		logger.info("[BEGIN]getIdListSizeHadoop("+pathString+")");
+		Configuration conf = new Configuration();
+		FileSystem fs = FileSystem.get(conf);
+		Path path = new Path(pathString);
+		SequenceFile.Reader reader = null;
+		int n;
+		try {
+			reader = new SequenceFile.Reader(fs, path, conf);
+			IntWritable key = new IntWritable();
+			IntWritable value = new IntWritable();
+			reader.next(key, value); // Read n.
+			n = value.get();
+		} finally {
+			IOUtils.closeStream(reader);
+		}
+		logger.info("[END]getIdListSizeHadoop("+pathString+")");
+		return n;
+	}
 	/*
 	 * (Hadoop) Idlist
 	 * Id list is stored in sequence file format:
@@ -38,7 +59,7 @@ public class CascadeSVMIOHelper {
 	 * value: feature id
 	 */
 	public static ArrayList<Integer> readIdListHadoop(String pathString) throws IOException {
-		logger.info("[START]CascadeSVMIOHelper.readIdListHadoop("+pathString+")");
+		logger.info("[BEGIN]readIdListHadoop("+pathString+")");
 		ArrayList<Integer> idlist = new ArrayList<Integer>();
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
@@ -48,17 +69,18 @@ public class CascadeSVMIOHelper {
 			reader = new SequenceFile.Reader(fs, path, conf);
 			IntWritable key = new IntWritable();
 			IntWritable value = new IntWritable();
+			reader.next(key, value); // Read n.
 			while (reader.next(key, value)) {
 				idlist.add(new Integer(value.toString()));
 			}
 		} finally {
 			IOUtils.closeStream(reader);
 		}
-		logger.info("[END]CascadeSVMIOHelper.readIdListHadoop("+pathString+")");
+		logger.info("[END]readIdListHadoop("+pathString+")");
 		return idlist;
 	}
 	public static ArrayList<Integer> readRawIdListHadoop(String pathString) throws IOException {
-		logger.info("[START]CascadeSVMIOHelper.readRawIdListHadoop("+pathString+")");
+		logger.info("[BEGIN]readRawIdListHadoop("+pathString+")");
 		ArrayList<Integer> idlist = new ArrayList<Integer>();
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
@@ -78,12 +100,12 @@ public class CascadeSVMIOHelper {
 		} finally {
 			IOUtils.closeStream(in);
 		}
-		logger.info("[END]CascadeSVMIOHelper.readRawIdListHadoop("+pathString+")");
+		logger.info("[END]readRawIdListHadoop("+pathString+")");
 		return idlist;
 	}
 	
 	public static void writeIdListHadoop(String pathString, ArrayList<Integer> idlist) throws IOException {
-		logger.info("[START]CascadeSVMIOHelper.writeIdListHadoop("+pathString+")");
+		logger.info("[BEGIN]writeIdListHadoop("+pathString+")");
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(new Configuration());
 		Path path = new Path(pathString);
@@ -92,7 +114,9 @@ public class CascadeSVMIOHelper {
 		IntWritable value = new IntWritable();
 		try {
 			writer = SequenceFile.createWriter(fs, conf, path, key.getClass(), value.getClass());
-			for (int i = 0; i < idlist.size(); i++) {
+			key.set(0);
+			value.set(idlist.size());
+			for (int i = 1; i <= idlist.size(); i++) {
 				key.set(i);
 				value.set(idlist.get(i).intValue());
 				writer.append(key, value);
@@ -100,11 +124,11 @@ public class CascadeSVMIOHelper {
 		} finally {
 			IOUtils.closeStream(writer);
 		}
-		logger.info("[END]CascadeSVMIOHelper.writeIdListHadoop("+pathString+")");
+		logger.info("[END]writeIdListHadoop("+pathString+")");
 	}
 	
 //	public static void writeIdListHadoop(String pathString, Iterator<Text> idlist) throws IOException {
-//		logger.info("[START]writeIdListHadoop");
+//		logger.info("[BEGIN]writeIdListHadoop");
 //		Configuration conf = new Configuration();
 //		FileSystem fs = FileSystem.get(conf);
 //		Path path = new Path(pathString);
@@ -133,11 +157,11 @@ public class CascadeSVMIOHelper {
 	 * That is, in the training file the first column must be the "ID" of
 	 * xi. In testing, ? can be any value.
 	 * Shicheng: So... we can use id here?
-	 * Shicheng: No, we can't. We should use sequential id start from 1
+	 * Shicheng: No, we can't. We should use sequential id BEGIN from 1
 	 * So, the id of support vector should be convert into the original id when print them.
 	 */
 	public static void writeSVIdListHadoop(String pathString, svm_model model, ArrayList<Integer> idList) throws IOException {
-		logger.info("[START]CascadeSVMIOHelper.writeSVIdListHadoop("+pathString+")");
+		logger.info("[BEGIN]writeSVIdListHadoop("+pathString+")");
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(new Configuration());
 		Path path = new Path(pathString);
@@ -146,7 +170,10 @@ public class CascadeSVMIOHelper {
 		IntWritable value = new IntWritable();
 		try {
 			writer = SequenceFile.createWriter(fs, conf, path, key.getClass(), value.getClass());
-			for (int i = 0; i < model.l; i++) {
+			key.set(0);
+			value.set(idList.size());
+			writer.append(key, value);
+			for (int i = 1; i <= model.l; i++) {
 				key.set(i);
 				value.set(idList.get((int)model.SV[i][0].value - 1));
 				writer.append(key, value);
@@ -154,7 +181,7 @@ public class CascadeSVMIOHelper {
 		} finally {
 			IOUtils.closeStream(writer);
 		}
-		logger.info("[END]CascadeSVMIOHelper.writeSVIdListHadoop("+pathString+")");
+		logger.info("[END]writeSVIdListHadoop("+pathString+")");
 	} 
 	
 	/*
@@ -162,7 +189,7 @@ public class CascadeSVMIOHelper {
 	 * One id per line.
 	 */
 	public static ArrayList<Integer> readIdListLocal(String path) throws IOException {
-		logger.info("[START]readIdListLocal");
+		logger.info("[BEGIN]readIdListLocal");
 		ArrayList<Integer> idlist = new ArrayList<Integer>();
 		BufferedReader reader = new BufferedReader(new FileReader(path));
 		String line;
@@ -175,7 +202,7 @@ public class CascadeSVMIOHelper {
 	}
 	
 	public static void writeIdListLocal(String path, ArrayList<Integer> idlist) throws IOException {
-		logger.info("[START]writeIdListLocal");
+		logger.info("[BEGIN]writeIdListLocal");
 		BufferedWriter writer = new BufferedWriter(new FileWriter(path));
 		for (int i = 0; i < idlist.size(); i++) {
 			writer.write(idlist.get(i).toString());
@@ -200,7 +227,7 @@ public class CascadeSVMIOHelper {
 	};
 	
 	public static void writeModelHadoop(String modelPath, svm_model model) throws IOException {
-		logger.info("[START]CascadeSVMIOHelper.writeModelHadoop("+modelPath+")");
+		logger.info("[BEGIN]writeModelHadoop("+modelPath+")");
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
 		Path path = new Path(modelPath);
@@ -287,7 +314,7 @@ public class CascadeSVMIOHelper {
 		} finally {
 			IOUtils.closeStream(fp);
 		}
-		logger.info("[END]CascadeSVMIOHelper.writeModelHadoop("+modelPath+")");
+		logger.info("[END]writeModelHadoop("+modelPath+")");
 	}
 	
 	/* 
@@ -295,7 +322,7 @@ public class CascadeSVMIOHelper {
 	 */
 	public static void writeModelLocal(String model_file_name, svm_model model) throws IOException
 	{
-		logger.info("[START]writeModelLocal");
+		logger.info("[BEGIN]writeModelLocal");
 		DataOutputStream fp = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(model_file_name)));
 
 		svm_parameter param = model.param;
@@ -386,7 +413,7 @@ public class CascadeSVMIOHelper {
 	 * Each line is a parameter.
 	 */
 	public static void writeSchedulerParameterHadoop(String pathString, CascadeSVMSchedulerParameter parameter) throws IOException {
-		logger.info("[START]CascadeSVMIOHelper.writeSchedulerParameterHadoop("+pathString+")");
+		logger.info("[BEGIN]writeSchedulerParameterHadoop("+pathString+")");
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
 		Path path = new Path(pathString);
@@ -401,11 +428,11 @@ public class CascadeSVMIOHelper {
 		} finally {
 			IOUtils.closeStream(writer);
 		}
-		logger.info("[END]CascadeSVMIOHelper.writeSchedulerParameterHadoop("+pathString+")");
+		logger.info("[END]writeSchedulerParameterHadoop("+pathString+")");
 	}
 	
 	public static void writeSchedulerParameterHadoop(String pathString, ArrayList<CascadeSVMSchedulerParameter> parameters) throws IOException {
-		logger.info("[START]CascadeSVMIOHelper.writeSchedulerParameterHadoop("+pathString+")");
+		logger.info("[BEGIN]writeSchedulerParameterHadoop("+pathString+")");
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
 		Path path = new Path(pathString);
@@ -422,7 +449,7 @@ public class CascadeSVMIOHelper {
 		} finally {
 			IOUtils.closeStream(writer);
 		}
-		logger.info("[END]CascadeSVMIOHelper.writeSchedulerParameterHadoop("+pathString+")");
+		logger.info("[END]writeSchedulerParameterHadoop("+pathString+")");
 	}
 
 	/*
@@ -431,7 +458,7 @@ public class CascadeSVMIOHelper {
 	 */
 	public static CascadeSVMSchedulerParameter readSchedulerParameterLocal(String pathString) 
 			throws IOException, CascadeSVMParameterFormatError {
-		logger.info("[START]readSchedulerParameterLocal");
+		logger.info("[BEGIN]readSchedulerParameterLocal");
 		BufferedReader reader = new BufferedReader(new FileReader(pathString));
 		String argLine = reader.readLine().trim();
 		CascadeSVMSchedulerParameter parameter = new CascadeSVMSchedulerParameter(argLine);
@@ -442,7 +469,7 @@ public class CascadeSVMIOHelper {
 	
 	public static void writeSchedulerParameterLocal(String pathString, CascadeSVMSchedulerParameter parameter) 
 			throws IOException, CascadeSVMParameterFormatError {
-		logger.info("[START]writeSchedulerParameterLocal");
+		logger.info("[BEGIN]writeSchedulerParameterLocal");
 		BufferedWriter writer = new BufferedWriter(new FileWriter(pathString));
 		String argLine = parameter.toString();
 		writer.write(argLine);
@@ -456,7 +483,7 @@ public class CascadeSVMIOHelper {
 	 * Each line is a parameter.
 	 */
 	public static void writeNodeParameterHadoop(String pathString, CascadeSVMNodeParameter parameter) throws IOException {
-		logger.info("[START]CascadeSVMIOHelper.writeNodeParameterHadoop("+pathString+")");
+		logger.info("[BEGIN]writeNodeParameterHadoop("+pathString+")");
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
 		Path path = new Path(pathString);
@@ -471,11 +498,11 @@ public class CascadeSVMIOHelper {
 		} finally {
 			IOUtils.closeStream(writer);
 		}
-		logger.info("[END]CascadeSVMIOHelper.writeNodeParameterHadoop("+pathString+")");
+		logger.info("[END]writeNodeParameterHadoop("+pathString+")");
 	}
 	
 	public static void writeNodeParameterHadoop(String pathString, ArrayList<CascadeSVMNodeParameter> parameters) throws IOException {
-		logger.info("[START]CascadeSVMIOHelper.writeNodeParameterHadoop("+pathString+")");
+		logger.info("[BEGIN]writeNodeParameterHadoop("+pathString+")");
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
 		Path path = new Path(pathString);
@@ -492,7 +519,7 @@ public class CascadeSVMIOHelper {
 		} finally {
 			IOUtils.closeStream(writer);
 		}
-		logger.info("[END]CascadeSVMIOHelper.writeNodeParameterHadoop("+pathString+")");
+		logger.info("[END]writeNodeParameterHadoop("+pathString+")");
 	}
 
 	/*
@@ -501,7 +528,7 @@ public class CascadeSVMIOHelper {
 	 */
 	public static CascadeSVMNodeParameter readNodeParameterLocal(String pathString) 
 			throws IOException, CascadeSVMParameterFormatError {
-		logger.info("[START]readNodeParameterLocal");
+		logger.info("[BEGIN]readNodeParameterLocal");
 		BufferedReader reader = new BufferedReader(new FileReader(pathString));
 		String argLine = reader.readLine().trim();
 		CascadeSVMNodeParameter parameter = new CascadeSVMNodeParameter(argLine);
@@ -512,7 +539,7 @@ public class CascadeSVMIOHelper {
 	
 	public static void writeNodeParameterLocal(String pathString, CascadeSVMNodeParameter parameter) 
 			throws IOException, CascadeSVMParameterFormatError {
-		logger.info("[START]writeNodeParameterLocal");
+		logger.info("[BEGIN]writeNodeParameterLocal");
 		BufferedWriter writer = new BufferedWriter(new FileWriter(pathString));
 		String argLine = parameter.toString();
 		writer.write(argLine);
@@ -527,7 +554,7 @@ public class CascadeSVMIOHelper {
 	 */
 	public static double[] readLabelHadoop(String pathString, ArrayList<Integer> idList) 
 			throws IOException {
-		logger.info("[START]CascadeSVMIOHelper.readLabelHadoop("+pathString+")");
+		logger.info("[BEGIN]readLabelHadoop("+pathString+")");
 		double[] labels = new double[idList.size()]; 
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
@@ -550,12 +577,12 @@ public class CascadeSVMIOHelper {
 		finally {
 			IOUtils.closeStream(in);
 		}
-		logger.info("[END]CascadeSVMIOHelper.readLabelHadoop("+pathString+")");
+		logger.info("[END]readLabelHadoop("+pathString+")");
 		return labels;
 	} 
 
 //	public static void writeLabelHadoop(String pathString, ArrayList<Integer> idList, ArrayList<Double> labelList) throws IOException {
-//		logger.info("[START]CascadeSVMIOHelper.writeLabelHadoop("+pathString+")");
+//		logger.info("[BEGIN]writeLabelHadoop("+pathString+")");
 //		Configuration conf = new Configuration();
 //		FileSystem fs = FileSystem.get(conf);
 //		Path path = new Path(pathString);
@@ -571,7 +598,7 @@ public class CascadeSVMIOHelper {
 //		} finally {
 //			IOUtils.closeStream(writer);
 //		}
-//		logger.info("[END]CascadeSVMIOHelper.writeLabelHadoop("+pathString+")");
+//		logger.info("[END]writeLabelHadoop("+pathString+")");
 //	}
 	
 	/*
@@ -579,7 +606,7 @@ public class CascadeSVMIOHelper {
 	 */
 	public static double[] readLabelLocal(String path, ArrayList<Integer> idList)
 		throws IOException {
-		logger.info("[START]readLabelLocal");
+		logger.info("[BEGIN]readLabelLocal");
 		BufferedReader labelFile = new BufferedReader(new FileReader(path));
 		double[] labels = new double[idList.size()];
 		String line;
@@ -600,7 +627,7 @@ public class CascadeSVMIOHelper {
 	 * (Hadoop) subset list
 	 */
 	public static ArrayList<String> readSubsetListHadoop(String pathString) throws IOException {
-		logger.info("[START]CascadeSVMIOHelper.readSubsetListHadoop("+pathString+")");
+		logger.info("[BEGIN]readSubsetListHadoop("+pathString+")");
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
 		Path path = new Path(pathString);
@@ -616,12 +643,12 @@ public class CascadeSVMIOHelper {
 		} finally {
 			IOUtils.closeStream(reader);
 		}
-		logger.info("[END]CascadeSVMIOHelper.readSubsetListHadoop("+pathString+")");
+		logger.info("[END]readSubsetListHadoop("+pathString+")");
 		return subsetList;
 	}
 	
 	public static void writeSubsetListHadoop(String pathString, ArrayList<String> subsetList) throws IOException {
-		logger.info("[START]CascadeSVMIOHelper.writeSubsetListHadoop("+pathString+")");
+		logger.info("[BEGIN]writeSubsetListHadoop("+pathString+")");
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
 		Path path = new Path(pathString);
@@ -638,11 +665,11 @@ public class CascadeSVMIOHelper {
 		} finally {
 			IOUtils.closeStream(writer);
 		}
-		logger.info("[END]CascadeSVMIOHelper.writeSubsetListHadoop("+pathString+")");
+		logger.info("[END]writeSubsetListHadoop("+pathString+")");
 	} 
 	
 	public static double readLDHadoop(String pathString) throws IOException {
-		logger.info("[START]CascadeSVMIOHelper.readLDHadoop("+pathString+")");
+		logger.info("[BEGIN]readLDHadoop("+pathString+")");
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
 		Path path = new Path(pathString);
@@ -655,12 +682,12 @@ public class CascadeSVMIOHelper {
 		} finally {
 			IOUtils.closeStream(in);
 		}
-		logger.info("[END]CascadeSVMIOHelper.readLDHadoop("+pathString+")");
+		logger.info("[END]readLDHadoop("+pathString+")");
 		return LD;
 	}
 	
 	public static void writeLDHadoop(String pathString, double LD) throws IOException {
-		logger.info("[START]CascadeSVMIOHelper.writeLDHadoop("+pathString+")");
+		logger.info("[BEGIN]writeLDHadoop("+pathString+")");
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
 		Path path = new Path(pathString);
@@ -670,7 +697,7 @@ public class CascadeSVMIOHelper {
 		} finally {
 			IOUtils.closeStream(out);
 		}
-		logger.info("[END]CascadeSVMIOHelper.writeLDHadoop("+pathString+")");
+		logger.info("[END]writeLDHadoop("+pathString+")");
 	}
 	
 	public static double readLDLocal(String path) throws IOException {
@@ -684,5 +711,13 @@ public class CascadeSVMIOHelper {
 		BufferedWriter writer = new BufferedWriter(new FileWriter(path));
 		writer.write(Double.toString(LD));
 		writer.close();
+	}
+	
+	public static void copyFiles(String srcPathString, String desPathString) throws IOException {
+		Configuration conf = new Configuration();
+		FileSystem fs = FileSystem.get(conf);
+		Path srcPath = new Path(srcPathString);
+		Path desPath = new Path(desPathString);
+		FileUtil.copy(fs, srcPath, fs, desPath, false, true, conf);
 	}
 }

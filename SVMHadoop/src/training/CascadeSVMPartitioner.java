@@ -53,7 +53,7 @@ public class CascadeSVMPartitioner {
 //	}
 //	
 //	public static String runPartitionerJob(CascadeSVMTrainParameter parameter) throws IOException {
-//		JobConf conf = new JobConf(CascadeSVMPartitioner.class);
+//		JobConf conf = new JobConf(class);
 //		conf.setJobName("CascadeSVM Partitioner");
 //		conf.set("nSubset", Integer.toString(parameter.nSubset));
 //		conf.set("workDir", parameter.workDir);
@@ -62,8 +62,8 @@ public class CascadeSVMPartitioner {
 //		
 //		FileInputFormat.addInputPath(conf, new Path(parameter.idlistPath));
 //		
-//		conf.setMapperClass(CascadeSVMPartitioner.class);
-//		conf.setReducerClass(CascadeSVMPartitioner.class);
+//		conf.setMapperClass(class);
+//		conf.setReducerClass(class);
 //		
 //		conf.setOutputFormat(NullOutputFormat.class);
 //		
@@ -78,18 +78,18 @@ public class CascadeSVMPartitioner {
 	 * @throws IOException
 	 */
 	public static String partitionIdListHadoop(CascadeSVMTrainParameter parameter) throws IOException {
-		logger.info("[START]CascadeSVMPartitioner.partitionIdListHadoop()");
+		logger.info("[BEGIN]partitionIdListHadoop()");
 		ArrayList<Integer> idList = CascadeSVMIOHelper.readIdListHadoop(parameter.idlistPath);
 		ArrayList< ArrayList<Integer> > subsets = partitionIdList(idList, parameter.nSubset);
 		String subsetListPath = CascadeSVMPathHelper.getSubsetListPath(parameter.workDir);
 		ArrayList<String> subsetList = new ArrayList<String>();
 		for (int i = 0; i < parameter.nSubset; i++) {
-			String idListPath = CascadeSVMPathHelper.getIdListPath(parameter.workDir, 1, i);
+			String idListPath = CascadeSVMPathHelper.getIdListPath(parameter.workDir, 0, i);
 			subsetList.add(idListPath);
 			CascadeSVMIOHelper.writeIdListHadoop(idListPath, subsets.get(i));
 		}
 		CascadeSVMIOHelper.writeSubsetListHadoop(subsetListPath, subsetList);
-		logger.info("[END]CascadeSVMPartitioner.partitionIdListHadoop()");
+		logger.info("[END]partitionIdListHadoop()");
 		return subsetListPath;
 	}
 	
@@ -109,7 +109,7 @@ public class CascadeSVMPartitioner {
 	} 
 	
 	public static ArrayList< ArrayList<Integer> > partitionIdList(ArrayList<Integer> idList, int nSubset) {
-		logger.info("[START]CascadeSVMPartitioner.partitionIdList()");
+		logger.info("[BEGIN]partitionIdList()");
 		ArrayList< ArrayList<Integer> > subsets = new ArrayList< ArrayList<Integer> >();
 		for (int i = 0; i < nSubset; i++) {
 			subsets.add(new ArrayList<Integer>());
@@ -118,7 +118,7 @@ public class CascadeSVMPartitioner {
 			int subsetId = rand.nextInt(nSubset);
 			subsets.get(subsetId).add(idList.get(i));
 		}
-		logger.info("[END]CascadeSVMPartitioner.partitionIdList()");
+		logger.info("[END]partitionIdList()");
 		return subsets;
 	}
 }

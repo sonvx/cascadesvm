@@ -7,14 +7,20 @@ import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.SequenceFileInputFormat;
+import org.apache.hadoop.mapred.lib.NullOutputFormat;
 import org.apache.log4j.Logger;
 
 import libsvm.svm;
@@ -42,7 +48,7 @@ public class CascadeSVMNode extends MapReduceBase
 	public void map(IntWritable key, Text value,
 			OutputCollector<IntWritable, Text> output, Reporter reporter)
 			throws IOException {
-		logger.info("[START]CascadeSVMNode.map()");
+		logger.info("[BEGIN]map()");
 		CascadeSVMNodeParameter parameter = null;
 		try {
 			parameter = new CascadeSVMNodeParameter(value.toString());
@@ -82,7 +88,7 @@ public class CascadeSVMNode extends MapReduceBase
 		CascadeSVMIOHelper.writeLDHadoop(parameter.LDPath, LD);
 		
 		output.collect(new IntWritable(0), new Text("done."));
-		logger.info("[END]CascadeSVMNode.map()");
+		logger.info("[END]map()");
 	}
 	
 	@Override
@@ -93,17 +99,17 @@ public class CascadeSVMNode extends MapReduceBase
 	}
 	
 	public float[][] projectKernelHadoop(CascadeSVMNodeParameter parameter, ArrayList<Integer> idList) throws IOException {
-		logger.info("[START]CascadeSVMNode.projectKernelHadoop()");
+		logger.info("[BEGIN]projectKernelHadoop()");
 		KernelProjector projector = new KernelProjector();
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
 		float[][] kernel = projector.projectHadoop(fs, parameter.kernelPath, idList, parameter.nData);
-		logger.info("[END]CascadeSVMNode.projectKernelHadoop()");
+		logger.info("[END]projectKernelHadoop()");
 		return kernel;
 	} 
 
 	public svm_problem createSVMProblem(ArrayList<Integer> idList, float[][] kernel, double[] labels) {
-		logger.info("[START]CascadeSVMNode.createSVMProblem");
+		logger.info("[BEGIN]createSVMProblem");
 		svm_problem prob = new svm_problem();
 		
 		prob.l = kernel.length;
@@ -122,13 +128,13 @@ public class CascadeSVMNode extends MapReduceBase
 		}
 		
 		prob.y = labels;
-		logger.info("[END]CascadeSVMNode.createSVMProblem");
+		logger.info("[END]createSVMProblem");
 		return prob;
 	}
 
 	@SuppressWarnings("unchecked")
 	public svm_parameter crossValidation(svm_problem problem, int nrFold, double randomSeed) {
-		 logger.info("[START]CascadeSVMNode.crossValidation()");
+		 logger.info("[BEGIN]crossValidation()");
 		 double[] target = new double[problem.y.length];
 		 ArrayList<Double>[] probabilities = new ArrayList[problem.l+1];
 		 for (int i = 0; i < problem.l + 1; i++)
@@ -161,23 +167,23 @@ public class CascadeSVMNode extends MapReduceBase
 		 changeProblem(problem, scale);
 		 svm_parameter bestParameter = getDefaultParams();
 		 bestParameter.C = bestC;
-		 logger.info("[END]CascadeSVMNode.crossValidation()");
+		 logger.info("[END]crossValidation()");
 		 return bestParameter;
 	}
 	
 	public double computeLD(svm_model model, svm_problem problem) {
-		logger.info("[START]CascadeSVMNode.computeLD()");
+		logger.info("[BEGIN]computeLD()");
 		double LD = 0;
 		int[] sv_indices = new int[model.l];
 		for (int i = 0; i < model.l; i++) {
-			sv_indices[i] = (int)model.SV[i][0].value - 1; // sv id starts from 1
+			sv_indices[i] = (int)model.SV[i][0].value - 1; // sv id BEGINs from 1
 			LD += model.sv_coef[0][i] * problem.y[sv_indices[i]] * model.label[0]; // [BUG FIX]: Sometimes the label will be -1 1, need to multiply -1 to ensure the right sign for sv_coef
 		}
 		for (int i = 0; i < model.l; i++)
 			for (int j = 0; j < model.l; j++) {
 				LD = LD - 0.5 * model.sv_coef[0][i] * model.sv_coef[0][j] * problem.x[sv_indices[i]][sv_indices[j]+1].value;
 			}
-		logger.info("[START]CascadeSVMNode.computeLD()");
+		logger.info("[BEGIN]computeLD()");
 		return LD;
 	}
 	
@@ -204,13 +210,13 @@ public class CascadeSVMNode extends MapReduceBase
 	}
 	
 	public void changeProblem(svm_problem prob, double scale) {
-		logger.info("[START]CascadeSVMNode.changeProblem()");
+		logger.info("[BEGIN]changeProblem()");
 		for (int i = 0; i < prob.x.length; i++) {
 			for (int j = 1; j < prob.x[i].length; j++) {
 				prob.x[i][j].value = Math.exp(Math.log1p(prob.x[i][j].value - 1) * scale);
 			}
 		}
-		logger.info("[End]CascadeSVMNode.changeProblem()");
+		logger.info("[End]changeProblem()");
 	}
 	
 	/**
@@ -223,7 +229,7 @@ public class CascadeSVMNode extends MapReduceBase
 	 * @return
 	 */
 	public double computeAveragePrecision(double[] label, ArrayList<Double>[] probabilities) {
-		logger.info("[START]CascadeSVMNode.computeAveragePrecision()");
+		logger.info("[BEGIN]computeAveragePrecision()");
 		int labelIndex = 0;
 		if (probabilities[0].get(1) == 1) {
 			labelIndex = 1;
@@ -243,12 +249,12 @@ public class CascadeSVMNode extends MapReduceBase
 			map += calculateAP(CrossValidationItemBySorts.get(i))[0];
 		}
 		map /= CrossValidationItemBySorts.size();
-		logger.info("[END]CascadeSVMNode.computeAveragePrecision()");
+		logger.info("[END]computeAveragePrecision()");
 		return map;
 	}
 
 	public double[] calculateAP(ArrayList<CrossValidationItem> crossValidationItems) {
-		logger.info("[START]CascadeSVMNode.calculateAP()");
+		logger.info("[BEGIN]calculateAP()");
 		double[] result = new double[2];
 		result[0] = 0;
 		result[1] = -1;
@@ -270,8 +276,52 @@ public class CascadeSVMNode extends MapReduceBase
 				result[0] += cur_precision*deltaRecall;
 			}
 		}
-		logger.info("[END]CascadeSVMNode.calculateAP()");
+		logger.info("[END]calculateAP()");
 		return result;
+	}
+	
+	// TEST
+	public static void main(String[] args) {
+		logger.info("[START]main()");
+		try {
+			CascadeSVMNodeParameter parameter = new CascadeSVMNodeParameter();
+			parameter.modelPath  = "shicheng/cascadesvm/workDir/model.1.0";
+			parameter.SVPath     = "shicheng/cascadesvm/workDir/sv.1.0";
+			parameter.LDPath     = "shicheng/cascadesvm/workDir/LD.1.0";
+			parameter.kernelPath = "shicheng/sin10000";
+			parameter.labelPath  = "shicheng/10000.labels";
+			parameter.idlistPath = "shicheng/cascadesvm/workDir/subset.1.0";
+			parameter.nData 	 = CascadeSVMIOHelper.getIdListSizeHadoop(parameter.idlistPath);
+			parameter.workDir	 = "shicheng/cascadesvm/";
+			parameter.nFold		 = 5;
+			String nodeParameterPath = CascadeSVMPathHelper.getNodeParameterPath(parameter.workDir);
+
+			JobConf conf = new JobConf(CascadeSVMTrain.class);
+			conf.setJobName("CascadeSVMNode Test");
+			FileInputFormat.addInputPath(conf, new Path(nodeParameterPath));
+			conf.setMapperClass(CascadeSVMNode.class);
+			conf.setReducerClass(CascadeSVMNode.class);
+			conf.setInputFormat(SequenceFileInputFormat.class);
+			conf.setOutputFormat(NullOutputFormat.class);
+			
+	    	conf.set("mapred.child.java.opts", "-Xmx1200m");		//cannot be too large <2000m
+			
+			conf.set("mapred.cluster.map.memory.mb","2000");
+			conf.set("mapred.cluster.reduce.memory.mb","2000");
+			
+			conf.set("mapred.job.map.memory.mb","2000");
+			conf.set("mapred.job.reduce.memory.mb","2000");
+			conf.set("mapred.tasktracker.map.tasks.maximum","1");
+			conf.set("mapred.map.max.attempts","8");
+			conf.set("mapred.reduce.max.attempts","8");
+			
+			JobClient client = new JobClient(conf);
+			client.submitJob(conf);
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+		logger.info("[END]main()");
 	}
 	
 	// TEST
@@ -322,7 +372,7 @@ public class CascadeSVMNode extends MapReduceBase
 //	}
 //	
 //	private void writeSVId(BufferedWriter SVIdOutputFile) throws IOException {
-//		if (verbose) logger.info("[Start]writeSVId");
+//		if (verbose) logger.info("[BEGIN]writeSVId");
 //		for (int i = 0; i < model.l; i++) {
 //			SVIdOutputFile.write(Integer.toString(idList.get((int)model.SV[i][0].value - 1)));
 //			SVIdOutputFile.newLine();
