@@ -74,39 +74,28 @@ public class CascadeSVMPartitioner {
 	/* Non MapReduce METHODS */
 	/**
 	 * @param parameter
-	 * @return subsetListPath
+	 * @return void
 	 * @throws IOException
 	 */
-	public static String partitionIdListHadoop(CascadeSVMTrainParameter parameter) throws IOException {
+	public static void partitionIdListHadoop(CascadeSVMTrainParameter parameter, ArrayList<Integer> idList) throws IOException {
 		logger.info("[BEGIN]partitionIdListHadoop()");
-		ArrayList<Integer> idList = CascadeSVMIOHelper.readIdListHadoop(parameter.idlistPath);
 		ArrayList< ArrayList<Integer> > subsets = partitionIdList(idList, parameter.nSubset);
-		String subsetListPath = CascadeSVMPathHelper.getSubsetListPath(parameter.workDir);
-		ArrayList<String> subsetList = new ArrayList<String>();
 		for (int i = 0; i < parameter.nSubset; i++) {
 			String idListPath = CascadeSVMPathHelper.getIdListPath(parameter.workDir, 0, i);
-			subsetList.add(idListPath);
 			CascadeSVMIOHelper.writeIdListHadoop(idListPath, subsets.get(i));
 		}
-		CascadeSVMIOHelper.writeSubsetListHadoop(subsetListPath, subsetList);
 		logger.info("[END]partitionIdListHadoop()");
-		return subsetListPath;
 	}
 	
-	public static String partitionIdListLocal(CascadeSVMTrainParameter parameter) throws IOException {
-		ArrayList<Integer> idList = CascadeSVMIOHelper.readIdListLocal(parameter.idlistPath);
-		ArrayList< ArrayList<Integer> > subsets = partitionIdList(idList, parameter.nSubset);
-		String workDir = CascadeSVMPathHelper.getLocalWorkDir();
-		String subsetListPath = CascadeSVMPathHelper.getSubsetListPath(workDir);
-		ArrayList<String> subsetList = new ArrayList<String>();
-		for (int i = 0; i < parameter.nSubset; i++) {
-			String idListPath = CascadeSVMPathHelper.getIdListPath(workDir, 1, i);
-			subsetList.add(idListPath);
-			CascadeSVMIOHelper.writeIdListHadoop(idListPath, subsets.get(i));
-		}
-		CascadeSVMIOHelper.writeSubsetListHadoop(subsetListPath, subsetList);
-		return subsetListPath;
-	} 
+//	public static void partitionIdListLocal(CascadeSVMTrainParameter parameter) throws IOException {
+//		ArrayList<Integer> idList = CascadeSVMIOHelper.readIdListLocal(parameter.idlistPath);
+//		ArrayList< ArrayList<Integer> > subsets = partitionIdList(idList, parameter.nSubset);
+//		String workDir = CascadeSVMPathHelper.getLocalWorkDir();
+//		for (int i = 0; i < parameter.nSubset; i++) {
+//			String idListPath = CascadeSVMPathHelper.getIdListPath(workDir, 1, i);
+//			CascadeSVMIOHelper.writeIdListHadoop(idListPath, subsets.get(i));
+//		}
+//	} 
 	
 	public static ArrayList< ArrayList<Integer> > partitionIdList(ArrayList<Integer> idList, int nSubset) {
 		logger.info("[BEGIN]partitionIdList()");
