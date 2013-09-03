@@ -243,7 +243,6 @@ public class CascadeSVMScheduler extends MapReduceBase
 			 nodeParameter.SVPath     = CascadeSVMPathHelper.getSVPath(parameter.workDir, parameter.iterationId, newSubsetIds.get(i));
 			 nodeParameter.LDPath     = CascadeSVMPathHelper.getLDPath(parameter.workDir, parameter.iterationId, newSubsetIds.get(i));
 			 nodeParameter.idlistPath = CascadeSVMPathHelper.getIdListPath(parameter.workDir, parameter.iterationId, newSubsetIds.get(i));
-			 nodeParameter.nData	  = CascadeSVMIOHelper.getIdListSizeHadoop(nodeParameter.idlistPath);
 			 nodeParameters.add(nodeParameter);
 		}
 		String nodeParameterPath = CascadeSVMPathHelper.getNodeParameterPath(parameter.workDir);

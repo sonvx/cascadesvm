@@ -8,46 +8,48 @@ public class CascadeSVMSchedulerParameter extends CascadeSVMTrainParameter {
 	public static String NULL_LIST_PATH = "NULL_LIST_PATH";
 	public static String helpText = "<iteration id> <last LD> <last support vector Path> " +
 			"<kernel path> <label path> <idlist path> <output directory>" +
-			"<subset size> <fold> <epsilon> <max iteration>";
-	
-	public CascadeSVMSchedulerParameter(
-			int iterationId,
-			double lastLD,
-			String lastSVPath,
-			String kernelPath, 
-			String labelPath, 
-			String idlistPath,
-			String workDir,
-			int nSubset, 
-			int nFold,
-			double epsilon,
-			int max_iter) {
-		super(kernelPath, labelPath, idlistPath, workDir, nSubset, nFold, epsilon, max_iter);
-		this.iterationId = iterationId;
-		this.lastLD = lastLD;
-		this.lastSVPath = lastSVPath;
-	}
-	
-	public CascadeSVMSchedulerParameter() {
-		iterationId = 0;
-		lastLD = 0;
-	}
-	
-	public CascadeSVMSchedulerParameter(CascadeSVMSchedulerParameter parameter) {
-		this(
-				parameter.iterationId,
-				parameter.lastLD,
-				parameter.lastSVPath,
-				parameter.kernelPath, 
-				parameter.labelPath, 
-				parameter.idlistPath,
-				parameter.workDir,
-				parameter.nSubset, 
-				parameter.nFold,
-				parameter.epsilon,
-				parameter.max_iter
-		);
-	}
+			"<subset size> <fold> <epsilon> <max iteration> <nData>";
+
+//	public CascadeSVMSchedulerParameter(
+//			int iterationId,
+//			double lastLD,
+//			String lastSVPath,
+//			String kernelPath, 
+//			String labelPath, 
+//			String idlistPath,
+//			String workDir,
+//			int nSubset, 
+//			int nFold,
+//			double epsilon,
+//			int max_iter,
+//			int nData) {
+//		super(kernelPath, labelPath, idlistPath, workDir, nSubset, nFold, epsilon, max_iter, nData);
+//		this.iterationId = iterationId;
+//		this.lastLD = lastLD;
+//		this.lastSVPath = lastSVPath;
+//	}
+//
+//	public CascadeSVMSchedulerParameter(CascadeSVMSchedulerParameter parameter) {
+//		this(
+//				parameter.iterationId,
+//				parameter.lastLD,
+//				parameter.lastSVPath,
+//				parameter.kernelPath, 
+//				parameter.labelPath, 
+//				parameter.idlistPath,
+//				parameter.workDir,
+//				parameter.nSubset, 
+//				parameter.nFold,
+//				parameter.epsilon,
+//				parameter.max_iter,
+//				parameter.nData
+//		);
+//	}
+//	
+//	public CascadeSVMSchedulerParameter() {
+//		iterationId = 0;
+//		lastLD = 0;
+//	}
 	
 	public CascadeSVMSchedulerParameter(CascadeSVMTrainParameter parameter) {
 		super(parameter);
@@ -71,6 +73,7 @@ public class CascadeSVMSchedulerParameter extends CascadeSVMTrainParameter {
 		this.nFold          = Integer.parseInt(args[8]);
 		this.epsilon 		= Double.parseDouble(args[9]);
 		this.max_iter       = Integer.parseInt(args[10]);
+		this.nData 			= Integer.parseInt(args[11]);
 	} 
 	
 	public CascadeSVMSchedulerParameter(String argLine) 
@@ -82,6 +85,6 @@ public class CascadeSVMSchedulerParameter extends CascadeSVMTrainParameter {
 		return  Integer.toString(iterationId) + " " + Double.toString(lastLD)+ " " + lastSVPath + " " + 
 				kernelPath + " " + labelPath + " " + idlistPath + " " +
 				workDir + " " + Integer.toString(nSubset) + " " + Integer.toString(nFold) + " " +
-				Double.toString(epsilon) + " " + Integer.toString(max_iter);
+				Double.toString(epsilon) + " " + Integer.toString(max_iter) + " " + Integer.toString(nData);
 	} 
 }

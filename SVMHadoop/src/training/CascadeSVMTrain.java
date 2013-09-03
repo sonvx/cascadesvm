@@ -1,6 +1,7 @@
 package training;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
@@ -8,11 +9,11 @@ public class CascadeSVMTrain {
 	public static Logger logger = Logger.getLogger(CascadeSVMTrain.class);
 	/**
 	 * @param trainParameter
-	 * @param subsetListPath
 	 * @return schedulerParameterPath
-	 * @throws IOException 
+	 * @throws IOException
+	 * Write scheduler parameter for first iteration into HDFS.
 	 */
-	private static String writeSchedulerParameter(CascadeSVMTrainParameter trainParameter, String subsetListPath) throws IOException {
+	private static String writeSchedulerParameter(CascadeSVMTrainParameter trainParameter) throws IOException {
 		logger.info("[BEGIN]writeSchedulerParameter()");
 		CascadeSVMSchedulerParameter schedulerParameter = new CascadeSVMSchedulerParameter(trainParameter);
 		schedulerParameter.iterationId = 1;
@@ -26,12 +27,21 @@ public class CascadeSVMTrain {
 		return schedulerParameterPath;
 	}
 	
+	/**
+	 * @param args
+	 * The main function for user.
+	 * 1. Create a CascadeSVMTrainParameter.
+	 * 2. Partition id list.
+	 * 3. Run scheduler job.
+	 */
 	public static void main(String[] args) {
 		logger.info("[BEGIN]main()");
 		try {
 			CascadeSVMTrainParameter parameter = new CascadeSVMTrainParameter(args);
-			String subsetListPath = CascadeSVMPartitioner.partitionIdListHadoop(parameter);
-			String schedulerParameterPath = writeSchedulerParameter(parameter, subsetListPath);
+			ArrayList<Integer> idList = CascadeSVMIOHelper.readIdListHadoop(parameter.idlistPath);
+			parameter.nData = idList.size();
+			CascadeSVMPartitioner.partitionIdListHadoop(parameter, idList);
+			String schedulerParameterPath = writeSchedulerParameter(parameter);
 			CascadeSVMScheduler.runSchedulerJob(schedulerParameterPath);
 		}
 		catch (CascadeSVMParameterFormatError e) {

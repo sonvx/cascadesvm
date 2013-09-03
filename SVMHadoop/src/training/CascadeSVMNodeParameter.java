@@ -4,10 +4,9 @@ public class CascadeSVMNodeParameter extends CascadeSVMTrainParameter {
 	public String modelPath;
 	public String SVPath;
 	public String LDPath;
-	public int nData;
 	public static int parameterSize = 9;
-	public static String helpText = "<model path> <support vector path> <LD path> <data size> " +
-			"<kernel path> <label path> <idlist path> <output directory> <fold>\n";
+	public static String helpText = "<model path> <support vector path> <LD path> " +
+			"<kernel path> <label path> <idlist path> <output directory> <fold> <data size>\n";
 	
 	public CascadeSVMNodeParameter() {}
 	
@@ -24,12 +23,12 @@ public class CascadeSVMNodeParameter extends CascadeSVMTrainParameter {
 		this.modelPath  = args[0]; 
 		this.SVPath     = args[1];
 		this.LDPath     = args[2];
-		this.nData 		= Integer.parseInt(args[3]);
-		this.kernelPath = args[4]; 
-		this.labelPath  = args[5]; 
-		this.idlistPath = args[6];
-		this.workDir  = args[7];
-		this.nFold      = Integer.parseInt(args[8]);
+		this.kernelPath = args[3]; 
+		this.labelPath  = args[4]; 
+		this.idlistPath = args[5];
+		this.workDir  = args[6];
+		this.nFold      = Integer.parseInt(args[7]);
+		this.nData 		= Integer.parseInt(args[8]);
 	}
 	
 	public CascadeSVMNodeParameter(String argLine) 
@@ -38,8 +37,8 @@ public class CascadeSVMNodeParameter extends CascadeSVMTrainParameter {
 	}
 	
 	public String toString() {
-		return  modelPath + " " + SVPath + " " + LDPath + " " + nData + " " + 
+		return  modelPath + " " + SVPath + " " + LDPath + " " + 
 				kernelPath + " " + labelPath + " " + idlistPath + " " +
-				workDir + " " + Integer.toString(nFold);
+				workDir + " " + Integer.toString(nFold) + " " + nData;
 	} 
 }

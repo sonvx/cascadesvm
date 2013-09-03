@@ -39,8 +39,8 @@ public class CascadeSVMNode extends MapReduceBase
 	static {
 		logger = Logger.getLogger(CascadeSVMNode.class);
 		tune_parameter = new double[11];
-		for (int i = -10; i <= 10; i += 2)
-			tune_parameter[i] = Math.pow(2, i);
+		for (int i = 0; i < 11; i++)
+			tune_parameter[i] = Math.pow(2, (i-5));
 		randomSeed = 0;
 	}
 
@@ -288,13 +288,14 @@ public class CascadeSVMNode extends MapReduceBase
 			parameter.modelPath  = "shicheng/cascadesvm/workDir/model.1.0";
 			parameter.SVPath     = "shicheng/cascadesvm/workDir/sv.1.0";
 			parameter.LDPath     = "shicheng/cascadesvm/workDir/LD.1.0";
-			parameter.kernelPath = "shicheng/sin10000";
-			parameter.labelPath  = "shicheng/10000.labels";
+			parameter.kernelPath = "shicheng/cascadesvm/sin10000";
+			parameter.labelPath  = "shicheng/cascadesvm/10000.labels";
 			parameter.idlistPath = "shicheng/cascadesvm/workDir/subset.1.0";
-			parameter.nData 	 = CascadeSVMIOHelper.getIdListSizeHadoop(parameter.idlistPath);
-			parameter.workDir	 = "shicheng/cascadesvm/";
+			parameter.workDir	 = "shicheng/cascadesvm/workDir";
 			parameter.nFold		 = 5;
+			parameter.nData 	 = 10000;
 			String nodeParameterPath = CascadeSVMPathHelper.getNodeParameterPath(parameter.workDir);
+			CascadeSVMIOHelper.writeNodeParameterHadoop(nodeParameterPath, parameter);
 
 			JobConf conf = new JobConf(CascadeSVMTrain.class);
 			conf.setJobName("CascadeSVMNode Test");
@@ -315,8 +316,7 @@ public class CascadeSVMNode extends MapReduceBase
 			conf.set("mapred.map.max.attempts","8");
 			conf.set("mapred.reduce.max.attempts","8");
 			
-			JobClient client = new JobClient(conf);
-			client.submitJob(conf);
+			JobClient.runJob(conf);
 		}
 		catch (IOException e) {
 			e.printStackTrace();

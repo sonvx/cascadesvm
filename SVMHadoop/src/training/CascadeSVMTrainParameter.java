@@ -11,6 +11,7 @@ public class CascadeSVMTrainParameter {
 	public int nFold;
 	public double epsilon;
 	public int max_iter;
+	public int nData;
 	
 	public static int parameterSize = 4;
 	
@@ -25,26 +26,27 @@ public class CascadeSVMTrainParameter {
 			String kernelPath, 
 			String labelPath, 
 			String idlistPath,
-			String workDir, 
+			String workDir,
 			int nSubset, 
 			int nFold,
 			double epsilon,
-			int max_iter) {
+			int max_iter,
+			int nData) {
 		this.kernelPath = kernelPath;
 		this.labelPath  = labelPath;
 		this.idlistPath = idlistPath;
-		this.workDir  = workDir;
+		this.workDir    = workDir;
 		this.nSubset    = nSubset;
 		this.nFold      = nFold;
 		this.epsilon	= epsilon;
 		this.max_iter   = max_iter;
+		this.nData      = nData;
 	}
 	
 	public CascadeSVMTrainParameter(
 			String kernelPath,
 			String labelPath,
 			String idlistPath,
-			int nData,
 			String workDir) {
 		this();
 		this.kernelPath = kernelPath;
@@ -69,7 +71,8 @@ public class CascadeSVMTrainParameter {
 				parameter.nSubset,
 				parameter.nFold,
 				parameter.epsilon,
-				parameter.max_iter
+				parameter.max_iter,
+				parameter.nData
 		);
 	}
 
@@ -106,6 +109,6 @@ public class CascadeSVMTrainParameter {
 
 	public String toString() {
 		return kernelPath + " " + labelPath + " " + idlistPath + " " + workDir + " " + 
-				Integer.toString(nSubset) + " " + Integer.toString(nFold) + " " + Double.toString(epsilon) + " " + Integer.toString(max_iter);
+				Integer.toString(nSubset) + " " + Integer.toString(nFold) + " " + Double.toString(epsilon) + " " + Integer.toString(max_iter) + " " + Integer.toString(nData);
 	}
 }
