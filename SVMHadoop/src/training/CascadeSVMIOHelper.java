@@ -3,7 +3,6 @@ package training;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
-import java.io.EOFException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -52,7 +51,7 @@ public class CascadeSVMIOHelper {
 			IntWritable value = new IntWritable();
 			while (reader.next(key, value)) {
 				idlist.add(new Integer(value.get()));
-				// logger.info(value.toString());
+				logger.info(value.toString());
 			}
 		} finally {
 			IOUtils.closeStream(reader);
@@ -534,21 +533,21 @@ public class CascadeSVMIOHelper {
 		FileSystem fs = FileSystem.get(conf);
 		Path path = new Path(pathString);
 		FSDataInputStream in = fs.open(path);
+		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+		String line;
 		try {
-			while (true) {
-				try {
-					int id = in.readInt();
-					double label = in.readDouble();
-					if (idList.contains(id)) {
-						labels[idList.indexOf(id)] = label; 
-					} 
-				}
-				catch (EOFException e) {
-					break;
+			while ((line = reader.readLine()) != null) {
+				String[] splittted_line = line.trim().split(" ");
+				int id = Integer.parseInt(splittted_line[0]);
+				double label = Double.parseDouble(splittted_line[1]);
+				if (idList.contains(id)) {
+					labels[idList.indexOf(id)] = label; 
+					logger.info(line);
 				} 
 			}
 		}
 		finally {
+			reader.close();
 			IOUtils.closeStream(in);
 		}
 		logger.info("[END]readLabelHadoop("+pathString+")");

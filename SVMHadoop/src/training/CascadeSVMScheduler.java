@@ -2,6 +2,7 @@ package training;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 
@@ -260,6 +261,7 @@ public class CascadeSVMScheduler extends MapReduceBase
 		HashSet<Integer> idSet = new HashSet<Integer>(idList1);
 		idSet.addAll(idList2);
 		ArrayList<Integer> idList = new ArrayList<Integer>(idSet);
+		Collections.sort(idList);
 		logger.info("[END]mergeIdLists()");
 		return idList;
 	}

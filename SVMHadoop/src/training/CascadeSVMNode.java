@@ -57,6 +57,7 @@ public class CascadeSVMNode extends MapReduceBase
 			logger.info(CascadeSVMNodeParameter.helpText);
 			return ;
 		}
+		logger.info(parameter.toString());
 		svm.rand.setSeed(randomSeed);
 		
 		reporter.setStatus("read id list");
@@ -67,6 +68,7 @@ public class CascadeSVMNode extends MapReduceBase
 		
 		reporter.setStatus("project kernel");
 		float[][] kernel = projectKernelHadoop(parameter, idList);
+		logger.info("kernel size = " + kernel.length + " x " + kernel[0].length);
 		
 		reporter.setStatus("create problem");
 		svm_problem problem = createSVMProblem(idList, kernel, labels);
@@ -74,7 +76,7 @@ public class CascadeSVMNode extends MapReduceBase
 		kernel = null; // GC
 		
 		reporter.setStatus("cross validation");
-		svm_parameter param = crossValidation(problem, parameter.nFold, randomSeed);
+		svm_parameter param = crossValidation(problem, parameter.nFold);
 		
 		reporter.setStatus("svm train");
 		svm_model model = svm.svm_train(problem, param);
@@ -135,7 +137,7 @@ public class CascadeSVMNode extends MapReduceBase
 	}
 
 	@SuppressWarnings("unchecked")
-	public svm_parameter crossValidation(svm_problem problem, int nrFold, double randomSeed) {
+	public svm_parameter crossValidation(svm_problem problem, int nrFold) {
 		 logger.info("[BEGIN]crossValidation()");
 		 double[] target = new double[problem.y.length];
 		 ArrayList<Double>[] probabilities = new ArrayList[problem.l+1];
@@ -153,8 +155,8 @@ public class CascadeSVMNode extends MapReduceBase
 			 for (int j = 0; j < tune_parameter.length; j++) {
 				 parameter.C = tune_parameter[i];
 				 svm.svm_cross_validation(problem, parameter, nrFold, target, probabilities);
-				 // logger.info("probabilities[0]" + probabilities[0].toString());
-				 // logger.info("probabilities[1]" + probabilities[1].toString());
+				 logger.info("probabilities[0]" + probabilities[0].toString());
+				 logger.info("probabilities[1]" + probabilities[1].toString());
 				 double map = computeAveragePrecision(problem.y, probabilities);
 				 if (map > bestMap)
 				 {
@@ -284,7 +286,7 @@ public class CascadeSVMNode extends MapReduceBase
 	
 	// TEST
 	public static void main(String[] args) {
-		logger.info("[START]main()");
+		logger.info("[BEGIN]main()");
 		try {
 			CascadeSVMNodeParameter parameter = new CascadeSVMNodeParameter();
 			parameter.modelPath  = "shicheng/cascadesvm/workDir/model.1.0";
@@ -292,7 +294,7 @@ public class CascadeSVMNode extends MapReduceBase
 			parameter.LDPath     = "shicheng/cascadesvm/workDir/LD.1.0";
 			parameter.kernelPath = "shicheng/cascadesvm/sin10000";
 			parameter.labelPath  = "shicheng/cascadesvm/10000.labels";
-			parameter.idlistPath = "shicheng/cascadesvm/workDir/subset.1.0";
+			parameter.idlistPath = "shicheng/cascadesvm/100.idlist.sequence";
 			parameter.workDir	 = "shicheng/cascadesvm/workDir";
 			parameter.nFold		 = 5;
 			parameter.nData 	 = 10000;
@@ -315,13 +317,14 @@ public class CascadeSVMNode extends MapReduceBase
 			conf.set("mapred.job.map.memory.mb","2000");
 			conf.set("mapred.job.reduce.memory.mb","2000");
 			conf.set("mapred.tasktracker.map.tasks.maximum","1");
-			conf.set("mapred.map.max.attempts","8");
-			conf.set("mapred.reduce.max.attempts","8");
+			conf.set("mapred.map.max.attempts","3");
+			conf.set("mapred.reduce.max.attempts","3");
 			
 			JobClient.runJob(conf);
 		}
 		catch (IOException e) {
-			e.printStackTrace();
+			// e.printStackTrace();
+			logger.info("[ERROR]IO Exception.");
 		}
 		logger.info("[END]main()");
 	}
@@ -336,20 +339,20 @@ public class CascadeSVMNode extends MapReduceBase
 //			String modelOutputPath,
 //			String SVIdOutputPath)
 //					throws NumberFormatException, FileNotFoundException, IOException {
-//		if (verbose) logger.info("[Begin]CascadeSVMNode");
+//		logger.info("[Begin]CascadeSVMNode");
 //		svm.rand.setSeed(randomSeed);
-//		idList = readIdList(new BufferedReader(new FileReader(idListPath))); // read id list
-//		double[] labels = readLabel(idList, new BufferedReader(new FileReader(labeLDath)));		// read label
-//		float[][] kernel = projectKernel(new BufferedReader(new FileReader(kerneLDath)), idList);								// project kernel
-//		problem = convert2SVMProblem(idList, kernel, labels);									// create svm problem
-//		kernel = null; // GC
-//		svm_parameter param = crossValidation(problem, nrFold, randomSeed);						// cross validation
-//		model = svm.svm_train(problem, param); 													// train
-//		svm.svm_save_model(modelOutputPath, model);												// output model
+//		idList = readIdList(new BufferedReader(new FileReader(idListPath)));  read id list
+//		double[] labels = readLabel(idList, new BufferedReader(new FileReader(labeLDath)));		 read label
+//		float[][] kernel = projectKernel(new BufferedReader(new FileReader(kerneLDath)), idList);								 project kernel
+//		problem = convert2SVMProblem(idList, kernel, labels);									 create svm problem
+//		kernel = null;  GC
+//		svm_parameter param = crossValidation(problem, nrFold, randomSeed);						 cross validation
+//		model = svm.svm_train(problem, param); 													 train
+//		svm.svm_save_model(modelOutputPath, model);												 output model
 //		writeSVId(new BufferedWriter(new FileWriter(SVIdOutputPath)));
-//		if (verbose) logger.info("[End]CascadeSVMNode");
+//		logger.info("[End]CascadeSVMNode");
 //	}
-	
+//	
 //	public void writeLD(String LDOutputPath) throws IOException {
 //		BufferedWriter writer = new BufferedWriter(new FileWriter(LDOutputPath));
 //		double LD = computeLD();
@@ -359,7 +362,7 @@ public class CascadeSVMNode extends MapReduceBase
 //	
 //	private ArrayList<Integer> readIdList(BufferedReader idListFile)
 //			throws NumberFormatException, IOException {
-//		if (verbose) logger.info("[Begin]readIdList");
+//		logger.info("[Begin]readIdList");
 //		ArrayList<Integer> idList = new ArrayList<Integer>();
 //		String line;
 //		while ((line = idListFile.readLine()) != null) {
@@ -369,18 +372,18 @@ public class CascadeSVMNode extends MapReduceBase
 //		idListFile.close();
 //		// Sort the id list
 //		Collections.sort(idList);
-//		if (verbose) logger.info("[End]readIdList");
+//		logger.info("[End]readIdList");
 //		return idList;
 //	}
 //	
 //	private void writeSVId(BufferedWriter SVIdOutputFile) throws IOException {
-//		if (verbose) logger.info("[BEGIN]writeSVId");
+//		logger.info("[BEGIN]writeSVId");
 //		for (int i = 0; i < model.l; i++) {
 //			SVIdOutputFile.write(Integer.toString(idList.get((int)model.SV[i][0].value - 1)));
 //			SVIdOutputFile.newLine();
 //		}
 //		SVIdOutputFile.close();
-//		if (verbose) logger.info("[End]writeSVId");
+//		logger.info("[End]writeSVId");
 //	}
 //	
 //	/**
@@ -392,7 +395,7 @@ public class CascadeSVMNode extends MapReduceBase
 //	 * @throws NumberFormatException 
 //	 */
 //	private float[][] projectKernel(BufferedReader kernelFile, ArrayList<Integer> idList) throws NumberFormatException, IOException {
-//		if (verbose) logger.info("[Begin]projectKernel");
+//		logger.info("[Begin]projectKernel");
 //		int n = idList.size();
 //		float[][] kernel = new float[n][n];
 //		int row = 0;
@@ -415,7 +418,7 @@ public class CascadeSVMNode extends MapReduceBase
 //			row++;
 //		}
 //		kernelFile.close();
-//		if (verbose) logger.info("[End]projectKernel");
+//		logger.info("[End]projectKernel");
 //		return kernel;
 //	}
 //	
@@ -431,8 +434,6 @@ public class CascadeSVMNode extends MapReduceBase
 //			double LD = svm.computeLD();
 //			System.out.println(LD);
 //		} catch (NumberFormatException e) {
-//			e.printStackTrace();
-//		} catch (FileNotFoundException e) {
 //			e.printStackTrace();
 //		} catch (IOException e) {
 //			e.printStackTrace();
