@@ -66,6 +66,7 @@ public class KernelProjector {
 					lastLineInKernel = sampleIDList.get(i)%chunkSize + 1;
 					i++;
 				} else {
+					if(br != null) br.close();
 					curKernelID++;		//move to next kernel chunk
 					br = new DataInputStream(new BufferedInputStream(fs.open(sortedKernel.get(curKernelID).getPath())));
 					lastLineInKernel = 0;
