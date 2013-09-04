@@ -1,12 +1,16 @@
 package training;
 
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 //import java.util.Iterator;
+
+
 
 
 import libsvm.svm_model;
@@ -47,7 +51,8 @@ public class CascadeSVMIOHelper {
 			IntWritable key = new IntWritable();
 			IntWritable value = new IntWritable();
 			while (reader.next(key, value)) {
-				idlist.add(new Integer(value.toString()));
+				idlist.add(new Integer(value.get()));
+				// logger.info(value.toString());
 			}
 		} finally {
 			IOUtils.closeStream(reader);
@@ -62,18 +67,16 @@ public class CascadeSVMIOHelper {
 		FileSystem fs = FileSystem.get(conf);
 		Path path = new Path(pathString);
 		FSDataInputStream in = fs.open(path);
-		int id;
+		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+		String line;
 		try {
-			while (true) {
-				try {
-					id = in.readInt();
-					idlist.add(new Integer(id));
-				}
-				catch (EOFException e) {
-					break;
-				}
+			while ((line = reader.readLine()) != null) {
+				int id = Integer.parseInt(line);
+				idlist.add(new Integer(id));
+				// logger.info(id);
 			}
 		} finally {
+			reader.close();
 			IOUtils.closeStream(in);
 		}
 		logger.info("[END]readRawIdListHadoop("+pathString+")");

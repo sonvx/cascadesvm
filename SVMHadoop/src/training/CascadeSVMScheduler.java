@@ -35,12 +35,15 @@ public class CascadeSVMScheduler extends MapReduceBase
 			parameter = new CascadeSVMSchedulerParameter(value.toString());
 		} catch (CascadeSVMParameterFormatError e) {
 			logger.info(e.toString());
+			logger.info(value.toString());
 			logger.info(CascadeSVMSchedulerParameter.helpText);
 			return ;
 		}
 		ArrayList<Integer> subsetIds = mergeSVIntoSubsetsHadoop(parameter);
 		String nodeParameterPath = generateNodeParametersHadoop(parameter, subsetIds);
-		runNodeJob(parameter, nodeParameterPath, 0, parameter.nSubset - 1);
+		int startId = 0;
+		int endId = parameter.nSubset - 1;
+		runNodeJob(parameter, nodeParameterPath, startId, endId);
 		output.collect(key, value);
 		logger.info("[END]map()");
 	} 
@@ -96,7 +99,8 @@ public class CascadeSVMScheduler extends MapReduceBase
 		conf.set("mapred.map.max.attempts","8");
 		conf.set("mapred.reduce.max.attempts","8");
 		
-		JobClient.runJob(conf);
+		JobClient client = new JobClient(conf);
+		client.submitJob(conf);
 		logger.info("[END]runSchedulerJob()");
 	}
 	
@@ -129,7 +133,7 @@ public class CascadeSVMScheduler extends MapReduceBase
 	
 	/**
 	 * @param parameter
-	 * @return mergedListPath
+	 * @return subsetIds, [0..nSubset]
 	 * @throws IOException
 	 */
 	public static ArrayList<Integer> mergeSVIntoSubsetsHadoop(CascadeSVMSchedulerParameter parameter) 
@@ -139,9 +143,6 @@ public class CascadeSVMScheduler extends MapReduceBase
 		 * ${outputPathPrefix}.#: id list, # in [0..n)
 		 */
 		logger.info("[BEGIN]mergeSVIntoSubsetsHadoop()");
-		ArrayList<Integer> subsetIds = new ArrayList<Integer>();
-		for (int i = 0; i < parameter.nSubset; i++)
-			subsetIds.add(i);
 		if (parameter.lastSVPath == CascadeSVMSchedulerParameter.NULL_LIST_PATH) {
 			logger.info("No support vector to be merged.");
 			for (int i = 0; i < parameter.nSubset; i++) {
@@ -149,18 +150,21 @@ public class CascadeSVMScheduler extends MapReduceBase
 				String desPath = CascadeSVMPathHelper.getIdListPath(parameter.workDir, parameter.iterationId, i);
 				CascadeSVMIOHelper.copyFiles(srcPath, desPath);
 			}
-			logger.info("[END]mergeSVIntoSubsets");
-			return subsetIds;
 		}
-		ArrayList<Integer> SVIdList = CascadeSVMIOHelper.readIdListHadoop(parameter.lastSVPath); 
-		
-		for (int i = 0; i < parameter.nSubset; i++) {
-			String subsetIdPath = CascadeSVMPathHelper.getIdListPath(parameter.workDir, 0, i);
-			ArrayList<Integer> subsetIdList = CascadeSVMIOHelper.readIdListHadoop(subsetIdPath);
-			ArrayList<Integer> mergedIdList = mergeIdLists(subsetIdList, SVIdList);
-			String mergedIdListPath = CascadeSVMPathHelper.getIdListPath(parameter.workDir, parameter.iterationId, i);
-			CascadeSVMIOHelper.writeIdListHadoop(mergedIdListPath, mergedIdList);
+		else {
+			ArrayList<Integer> SVIdList = CascadeSVMIOHelper.readIdListHadoop(parameter.lastSVPath); 
+			
+			for (int i = 0; i < parameter.nSubset; i++) {
+				String subsetIdPath = CascadeSVMPathHelper.getIdListPath(parameter.workDir, 0, i);
+				ArrayList<Integer> subsetIdList = CascadeSVMIOHelper.readIdListHadoop(subsetIdPath);
+				ArrayList<Integer> mergedIdList = mergeIdLists(subsetIdList, SVIdList);
+				String mergedIdListPath = CascadeSVMPathHelper.getIdListPath(parameter.workDir, parameter.iterationId, i);
+				CascadeSVMIOHelper.writeIdListHadoop(mergedIdListPath, mergedIdList);
+			}
 		}
+		ArrayList<Integer> subsetIds = new ArrayList<Integer>();
+		for (int i = 0; i < parameter.nSubset; i++)
+			subsetIds.add(i);
 		logger.info("[END]mergeSVIntoSubsets()");
 		return subsetIds;
 	}
