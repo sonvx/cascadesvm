@@ -10,47 +10,50 @@ public class CascadeSVMSchedulerParameter extends CascadeSVMTrainParameter {
 			"<kernel path> <label path> <idlist path> <output directory>" +
 			"<subset size> <fold> <epsilon> <max iteration> <nData>";
 
-//	public CascadeSVMSchedulerParameter(
-//			int iterationId,
-//			double lastLD,
-//			String lastSVPath,
-//			String kernelPath, 
-//			String labelPath, 
-//			String idlistPath,
-//			String workDir,
-//			int nSubset, 
-//			int nFold,
-//			double epsilon,
-//			int max_iter,
-//			int nData) {
-//		super(kernelPath, labelPath, idlistPath, workDir, nSubset, nFold, epsilon, max_iter, nData);
-//		this.iterationId = iterationId;
-//		this.lastLD = lastLD;
-//		this.lastSVPath = lastSVPath;
-//	}
-//
-//	public CascadeSVMSchedulerParameter(CascadeSVMSchedulerParameter parameter) {
-//		this(
-//				parameter.iterationId,
-//				parameter.lastLD,
-//				parameter.lastSVPath,
-//				parameter.kernelPath, 
-//				parameter.labelPath, 
-//				parameter.idlistPath,
-//				parameter.workDir,
-//				parameter.nSubset, 
-//				parameter.nFold,
-//				parameter.epsilon,
-//				parameter.max_iter,
-//				parameter.nData
-//		);
-//	}
-//	
-//	public CascadeSVMSchedulerParameter() {
-//		iterationId = 0;
-//		lastLD = 0;
-//	}
+	public CascadeSVMSchedulerParameter(
+			int iterationId,
+			double lastLD,
+			String lastSVPath,
+			String kernelPath, 
+			String labelPath, 
+			String idlistPath,
+			String workDir,
+			int nSubset, 
+			int nFold,
+			double epsilon,
+			int max_iter,
+			int nData) {
+		super(kernelPath, labelPath, idlistPath, workDir, nSubset, nFold, epsilon, max_iter, nData);
+		this.iterationId = iterationId;
+		this.lastLD = lastLD;
+		this.lastSVPath = lastSVPath;
+	}
+
+	/**
+	 * @param parameter
+	 * This constructor is used to duplicate scheduler parameter when submit job for next iteration.
+	 */
+	public CascadeSVMSchedulerParameter(CascadeSVMSchedulerParameter parameter) {
+		this(
+				parameter.iterationId,
+				parameter.lastLD,
+				parameter.lastSVPath,
+				parameter.kernelPath, 
+				parameter.labelPath, 
+				parameter.idlistPath,
+				parameter.workDir,
+				parameter.nSubset, 
+				parameter.nFold,
+				parameter.epsilon,
+				parameter.max_iter,
+				parameter.nData
+		);
+	}
 	
+	/**
+	 * @param parameter
+	 * This constructor is used to create scheduler parameter for first iteration.
+	 */
 	public CascadeSVMSchedulerParameter(CascadeSVMTrainParameter parameter) {
 		super(parameter);
 	} 

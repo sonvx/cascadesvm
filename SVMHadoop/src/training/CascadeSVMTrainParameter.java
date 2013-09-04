@@ -89,12 +89,12 @@ public class CascadeSVMTrainParameter {
 			case 'e': epsilon = Double.parseDouble(args[i+1]); break;
 			case 'i': max_iter = Integer.parseInt(args[i+1]); break;
 			default:
-				throw(new CascadeSVMParameterFormatError("Illegal parameter"));
+				throw(new CascadeSVMParameterFormatError("Illegal optional parameter."));
 			}
 			i++;
 		}
 		if (args.length - i != parameterSize) {
-			throw(new CascadeSVMParameterFormatError("Illegal parameter"));
+			throw(new CascadeSVMParameterFormatError("Illegal parameter size."));
 		}
 		kernelPath = args[i];
 		labelPath  = args[i+1];

@@ -74,8 +74,9 @@ public class CascadeSVMPartitioner {
 	/* Non MapReduce METHODS */
 	/**
 	 * @param parameter
-	 * @return void
+	 * @param idList
 	 * @throws IOException
+	 * Given an id list, partition it into several subsets and write them to HDFS.
 	 */
 	public static void partitionIdListHadoop(CascadeSVMTrainParameter parameter, ArrayList<Integer> idList) throws IOException {
 		logger.info("[BEGIN]partitionIdListHadoop()");

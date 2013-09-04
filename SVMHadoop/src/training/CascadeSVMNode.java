@@ -53,6 +53,8 @@ public class CascadeSVMNode extends MapReduceBase
 		try {
 			parameter = new CascadeSVMNodeParameter(value.toString());
 		} catch (CascadeSVMParameterFormatError e) {
+			logger.info(e.toString());
+			logger.info(CascadeSVMNodeParameter.helpText);
 			return ;
 		}
 		svm.rand.setSeed(randomSeed);
