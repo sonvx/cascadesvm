@@ -1,0 +1,30 @@
+This page shows how to train on Hadoop using CascadeSVM.
+
+TODO: The training component is still under debugging, some instructions might be modified later.
+
+= Preprocess =
+
+In order to use CascadeSVM to perform training on CascadeSVM, you should prepare kernel, label and id list before you can invoke the jar file in the console to submit job. Please see [https://code.google.com/p/cascadesvm/wiki/HowtoComputerKernel HowtoComputeKernel] for how prepare the kernel. Here we will provide detail of how to generate the label and id list.
+
+The input format of label is plain text file, each line has two numbers, the first integer is id, and the second float is label. The label can only be 1 or -1, this is because CascadeSVM will perform binary training for each class, then use one-versus-all strategy to predict on testing data. Here is an sample of label file:
+{{{
+1 1
+2 1
+3 -1
+4 -1
+}}}
+
+
+
+= Details =
+
+Add your content here.  Format your content with:
+  * Text in *bold* or _italic_
+  * Headings, paragraphs, and lists
+  * Automatic links to other wiki pages
+
+Plan:
+
+1. Support transforming multiple class label file to binary class label files.
+
+2.
