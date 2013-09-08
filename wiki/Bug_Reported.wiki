@@ -1,8 +1,12 @@
 #summary One-sentence summary of this page.
 
+
+
+= Fixed Bug =
+  * In writing out sequence file, when the total file number can be exactly divided by the chunk size. -Lu Jiang
+
 = Found Bug =
 
-1. It may has a bug whiling writing out sequence file. When the total file number can be exactly divided by the chunk size. Using 10 documents and chunk _size to test. -Lu Jiang
 
 
 = Details =
