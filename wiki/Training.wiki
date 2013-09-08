@@ -41,7 +41,7 @@ CascadeSVMTrain [options] kernel_path label_path idlist_path work_directory
   -i max_iter : max iteration (default 5)
 }}}
 
-Notice that you will also need to specify the work directory, which is used to store all the intermedia and final result and is also on HDFS. For example, if the kernel, label and id list are stored in cascade/kernel, cascade/label, cascade/idlist.sequence, respectively. And cascade/workDir is created to be used as work directory. Then your command will be looked like this,
+Notice that you will also need to specify the work directory, which is used to store all the intermedia and final result and it is also on HDFS. For example, if the kernel, label and id list are stored in cascade/kernel, cascade/label, cascade/idlist.sequence, respectively. And cascade/workDir is created to be used as work directory. Then your command will be looked like this,
 
 {{{
 hadoop jar CascadeSVMTrain.jar CascadeSVMTrain cascade/kernel cascade/label cascade/idlist.sequence cascade/workDir
