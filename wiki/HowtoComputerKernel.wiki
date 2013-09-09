@@ -1,4 +1,15 @@
-#summary One-sentence summary of this page.
+#How to computer big kernel matrices.
+
+
+
+
+CascadeSVM supports the following kernels:
+
+
+  * sdal;k
+
+
+
 
 
 *The test package for this page is [http://www.cs.cmu.edu/~lujiang/applications/kernelcomputation_test.zip here]*
