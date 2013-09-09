@@ -13,7 +13,9 @@ CascadeSVM supports the following kernels:
   * Intersection
   * User Defined Kernel
 
-
+<a href="http://www.codecogs.com/eqnedit.php?latex=\sum \alpha ^{\beta }"
+target="_blank"><img src="http://latex.codecogs.com/gif.latex?\sum \alpha ^{\beta
+}%.png" title="\sum \alpha ^{\beta }" /></a>
 
 
 
