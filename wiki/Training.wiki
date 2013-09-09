@@ -1,3 +1,4 @@
+#labels Featured
 This page shows how to train on Hadoop using CascadeSVM.
 
 TODO: The training component is still under debugging, some instructions might be modified later.
