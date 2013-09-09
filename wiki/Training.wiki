@@ -3,7 +3,7 @@ This page shows how to train on Hadoop using CascadeSVM.
 
 TODO: The training component is still under debugging, some instructions might be modified later.
 
-= Preprocess =
+= Preprocessing =
 
 In order to use CascadeSVM to perform training on CascadeSVM, you should prepare kernel, label and id list before you can invoke the jar file in the console to submit job. Please see [https://code.google.com/p/cascadesvm/wiki/HowtoComputerKernel HowtoComputeKernel] for how prepare the kernel. Here we will provide detail of how to generate the label and id list.
 
