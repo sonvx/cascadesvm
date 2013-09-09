@@ -17,7 +17,7 @@ CascadeSVM supports the following kernels:
 
 
 
-
+The input files are
 
 IDlist:
 The first column is the relative location of the feature files and the second column is the ID number.
