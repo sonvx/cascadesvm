@@ -1,18 +1,23 @@
 #How to computer big kernel matrices.
 
+*The test package for this page is [http://www.cs.cmu.edu/~lujiang/applications/kernelcomputation_test.zip here]*
 
 
 
 CascadeSVM supports the following kernels:
 
 
-  * sdal;k
+  * Linear
+  * RBF
+  * Chi Square
+  * Intersection
+  * User Defined Kernel
 
 
 
 
 
-*The test package for this page is [http://www.cs.cmu.edu/~lujiang/applications/kernelcomputation_test.zip here]*
+
 
 IDlist:
 The first column is the relative location of the feature files and the second column is the ID number.
