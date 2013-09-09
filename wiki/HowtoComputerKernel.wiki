@@ -5,7 +5,6 @@
 
 
 CascadeSVM supports the following kernels:
-<wiki:gadget url="http://mathml-gadget.googlecode.com/svn/trunk/mathml-gadget.xml" border="0" up_content="root3x + x^phi + x_1"/>
 
   * Linear
   * RBF
@@ -13,10 +12,10 @@ CascadeSVM supports the following kernels:
   * Intersection
   * User Defined Kernel
 
-<a href="http://www.codecogs.com/eqnedit.php?latex=\sum \alpha ^{\beta }"
-target="_blank"><img src="http://latex.codecogs.com/gif.latex?\sum \alpha ^{\beta
-}%.png" title="\sum \alpha ^{\beta }" /></a>
-
+To use user defined kernel, please implement the following method in local.KernelCalculator
+{{{
+public float[] user_defined(KernelRow row)
+}}}
 
 
 The input files are
