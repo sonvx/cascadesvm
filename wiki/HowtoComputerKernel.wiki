@@ -12,7 +12,7 @@ CascadeSVM supports the following kernels:
   * Intersection
   * User Defined Kernel
 
-To use user defined kernel, please implement the following method in local.KernelCalculator
+To use user defined kernel, please implement the following method in local\.KernelCalculator
 
 {{{
 public float[] user_defined(KernelRow row)
