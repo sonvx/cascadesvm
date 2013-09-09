@@ -53,7 +53,9 @@ public class KernelCalculator {
 	}
 	
 	
-	
+	public float[] user_defined(KernelRow row) {
+		return null;
+	}
 	
 	public float[] rbf(KernelRow row) {
 		float[] result =  new float[inmatrix.length];
@@ -92,8 +94,18 @@ public class KernelCalculator {
 	}
 	
 	
+	public float[] linear(KernelRow row) {
+		float[] result =  new float[inmatrix.length];
+		for(int i = 0 ; i < inmatrix.length ; i++) {
+			result[i] = dotproduct(row, inmatrix[i]) ;
+		}
+		return result;
+	}
+
 	
-	public double dotproduct(KernelRow r1, KernelRow r2) {
+	
+	
+	public float dotproduct(KernelRow r1, KernelRow r2) {
 		double result = 0;
 		int n1 = r1.indexes.length;
 		int n2 = r2.indexes.length;
@@ -110,7 +122,7 @@ public class KernelCalculator {
 				p1++;
 			}
 		}
-		return result;
+		return (float)result;
 	}
 	
 	
