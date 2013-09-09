@@ -12,7 +12,7 @@ CascadeSVM supports the following kernels:
   * Intersection
   * User Defined Kernel
 
-To use user defined kernel, please implement the following method in KernelCalculator
+To use user defined kernel, please implement the following method in [https://code.google.com/p/cascadesvm/source/browse/SVMHadoop/src/local/KernelCalculator.java KernelCalculator]
 
 {{{
 public float[] user_defined(KernelRow row)
