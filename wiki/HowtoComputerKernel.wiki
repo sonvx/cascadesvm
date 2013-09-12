@@ -50,7 +50,7 @@ shot1/shot1_9_RKF.spbof 9
 }}}
 
 
-==Running KernelComp==
+==Running Kernel Computation==
 1) Chunk the feature into a binary A matrix.
 
 java -jar kernel-chunk-short.jar in_feature_dir idlist out_A_matrix_dir the_chunk_size feature_name_prefix
