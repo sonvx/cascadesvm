@@ -1,8 +1,8 @@
 #How to computer big kernel matrices.
 
-*The test package for this page is [http://www.cs.cmu.edu/~lujiang/applications/kernelcomputation_test.zip here]*
+==The test package for this page is [http://www.cs.cmu.edu/~lujiang/applications/kernelcomputation_test.zip here]==
 
-
+==Kernels==
 
 CascadeSVM supports the following kernels:
 
@@ -18,6 +18,7 @@ To use user defined kernel, please implement the following method in [https://co
 public float[] user_defined(KernelRow row)
 }}}
 
+==Input File Format==
 
 The input files for the kernel calculation are
 
@@ -49,7 +50,7 @@ shot1/shot1_9_RKF.spbof 9
 }}}
 
 
-
+==Running KernelComp==
 1) Chunk the feature into a binary A matrix.
 
 java -jar kernel-chunk-short.jar in_feature_dir idlist out_A_matrix_dir the_chunk_size feature_name_prefix
