@@ -40,4 +40,4 @@ java -jar -Xmx8000M psc-computer3in1.jar 236697 A/sift/ A/csift/ A/mosift/ examp
 
 == By Primal Objective Function ==
 
-[under construction]
+under construction
