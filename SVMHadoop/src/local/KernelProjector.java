@@ -16,7 +16,7 @@ import org.apache.hadoop.fs.Path;
 public class KernelProjector {
 	
 	public float[][] projectHadoop(FileSystem fs, String kerneldir, ArrayList<Integer> sampleIDList, int kernelDim) {
-		
+		sampleIDList = arrayMinusOne(sampleIDList);
 		int sizeOfFloat = (int) (Float.SIZE/8.0d);
 		//0) Sort the sample ID List
 		Collections.sort(sampleIDList);
@@ -46,7 +46,7 @@ public class KernelProjector {
 		float[][] result = new float[sampleIDList.size()][sampleIDList.size()];
 		
 		//3) Project the kernel values
-		DataInputStream br = null;
+		BufferedInputStream br = null;
 		
 		
 		int curKernelID = -1;
@@ -56,19 +56,19 @@ public class KernelProjector {
 			for(int i = 0 ; i < sampleIDList.size() ; ) {
 				if(sampleIDList.get(i) < (curKernelID+1)*chunkSize) {
 					int numLine2Skip = sampleIDList.get(i)%chunkSize - lastLineInKernel;
-					br.skipBytes(numLine2Skip*wholeLineSkip);
+					safeSkip(br, numLine2Skip*wholeLineSkip);
 					for(int j = 0 ; j < skiparary.length ; j++) {
-						br.skipBytes(skiparary[j]);
+						safeSkip(br, skiparary[j]);
 						br.read(floatbyte);
 						result[i][j] = KernelCalculator.toIEEE754Float(floatbyte);
 					}
-					br.skipBytes(endLineSkip);
+					safeSkip(br, endLineSkip);
 					lastLineInKernel = sampleIDList.get(i)%chunkSize + 1;
 					i++;
 				} else {
 					if(br != null) br.close();
 					curKernelID++;		//move to next kernel chunk
-					br = new DataInputStream(new BufferedInputStream(fs.open(sortedKernel.get(curKernelID).getPath())));
+					br = new BufferedInputStream(fs.open(sortedKernel.get(curKernelID).getPath()));
 					lastLineInKernel = 0;
 					continue;	//without increasing i
 				}
@@ -91,7 +91,7 @@ public class KernelProjector {
 	
 	
 	public float[][] project(File kerneldir, ArrayList<Integer> sampleIDList, int kernelDim) {
-		
+		sampleIDList = arrayMinusOne(sampleIDList);
 		int sizeOfFloat = (int) (Float.SIZE/8.0d);
 		//0) Sort the sample ID List
 		Collections.sort(sampleIDList);
@@ -121,7 +121,7 @@ public class KernelProjector {
 		float[][] result = new float[sampleIDList.size()][sampleIDList.size()];
 		
 		//3) Project the kernel values
-		DataInputStream br = null;
+		BufferedInputStream br = null;
 		
 		
 		int curKernelID = -1;
@@ -131,18 +131,19 @@ public class KernelProjector {
 			for(int i = 0 ; i < sampleIDList.size() ; ) {
 				if(sampleIDList.get(i) < (curKernelID+1)*chunkSize) {
 					int numLine2Skip = sampleIDList.get(i)%chunkSize - lastLineInKernel;
-					br.skipBytes(numLine2Skip*wholeLineSkip);
+					safeSkip(br, numLine2Skip*wholeLineSkip);
 					for(int j = 0 ; j < skiparary.length ; j++) {
-						br.skipBytes(skiparary[j]);
+						safeSkip(br, skiparary[j]);
 						br.read(floatbyte);
 						result[i][j] = KernelCalculator.toIEEE754Float(floatbyte);
 					}
-					br.skipBytes(endLineSkip);
+					safeSkip(br, endLineSkip);
 					lastLineInKernel = sampleIDList.get(i)%chunkSize + 1;
 					i++;
 				} else {
+					if(br != null) br.close();
 					curKernelID++;		//move to next kernel chunk
-					br = new DataInputStream(new FileInputStream(sortedKernel.get(curKernelID)));
+					br = new BufferedInputStream(new FileInputStream(sortedKernel.get(curKernelID)));
 					lastLineInKernel = 0;
 					continue;	//without increasing i
 				}
@@ -164,6 +165,13 @@ public class KernelProjector {
 	}
 	
 	
+	
+	private void safeSkip(BufferedInputStream br, long numOfBytes) throws IOException {
+		long actualSkipedByte = 0;
+		while(actualSkipedByte != numOfBytes) {
+			actualSkipedByte += br.skip(numOfBytes-actualSkipedByte);
+		}
+	}
 	
 	private ArrayList<FileStatus> sortKernelPathHadoop(FileSystem fs, String kerneldir) throws Exception {
 		
@@ -307,6 +315,18 @@ public class KernelProjector {
 	}
 	
 	
+	/**
+	 * idlist contains the ID starting from 1
+	 * We need to convert the ID starting from 0
+	 * @param idlist
+	 */
+	private ArrayList<Integer> arrayMinusOne(ArrayList<Integer> idlist) {
+		ArrayList<Integer> internal_idlist = new ArrayList<Integer>();
+		for(int i = 0 ; i < idlist.size() ; i++) {
+			internal_idlist.add(idlist.get(i)-1);
+		}
+		return internal_idlist;
+	}
 	
 
 	/**
@@ -316,8 +336,8 @@ public class KernelProjector {
 		KernelProjector worker = new KernelProjector();
 		ArrayList<Integer> c = new ArrayList<Integer>();
 		c.add(512);
-		c.add(0);
 		c.add(1);
+		c.add(2);
 		c.add(1707);
 		c.add(1807);
 		c.add(1107);
@@ -325,8 +345,9 @@ public class KernelProjector {
 		c.add(104);
 		c.add(107);
 		c.add(707);
+		c.add(29999);
 
-		worker.project(new File("G:\\a\\e\\d\\kernelcomputation_test\\result_truth"), c, 2038);
+		worker.project(new File("C:\\Users\\lujiang\\Downloads\\kernelcomputation_test (1)\\kernel_truth"), c, 30000);
 	
 
 	}
