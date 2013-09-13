@@ -1,0 +1,39 @@
+#How to do the prediction
+
+== By Dual Objective Function ==
+
+1) Writing the extracted features into the B matrix command:
+{{{
+java -jar bmatrix_writer.jar feature_dir  idlistfile  output_dir chunk_size name_prefix
+}}}
+  * feature_dir  is the untared features outputted by feature extraction pipeline
+  * chunk_size is the number of line in each B matrix; the empirical setting is 200
+  * name_prefix is a string indicating the feature name
+Example code:
+{{{
+java -jar bmatrix_writer.jar example/features/sift/ example/idlist.txt example/bmatrix/sift 3 sift
+
+java -jar bmatrix_writer.jar example/features/csift/ example/idlist.txt example/bmatrix/csift 3 csift
+
+java -jar bmatrix_writer.jar example/features/mosift/ example/idlist.txt example/bmatrix/mosift 3 mosift
+}}}
+
+
+1)  run the prediction pipeline command:
+{{{
+java -jar –Xmx6000m psc-computer3in1.jar number_of_training_samples A_matrix_sift_dir A_matrix_csift_dir A_matrix_mosift_dir B_matrix_sift_file B_matrix_csift_file B_matrix_mosift_file modelfile prediction_ouput_file [load_chunk_size=200]
+}}}
+  * number_of_training_samples is the number of total training examples in A matrix. For the current model the value is 236697
+  * A_matrix_sift_dir is the dir of sift matrix. For the current model the A matrix can be found in A folder.
+  * B_matrix_sift_ file is the file outputted in the previous step.
+modelfile is the current used SIN model. For the current model it is med12-3in1-concept346.models
+  * prediction_ouput_file is the output prediction file
+  * load_chunk_size is the number of loaded row from B matrix once. The parameter is set according to the size of memory. The empirical setting is 201
+
+Example code:
+{{{
+java -jar -Xmx8000M psc-computer3in1.jar 236697 A/sift/ A/csift/ A/mosift/ example/bmatrix/sift/sift-bmatrix0-2 example/bmatrix/csift/csift-bmatrix0-2 example/bmatrix/mosift/mosift-bmatrix0-2 med12-3in1-concept346.models example/prediction/0.prediction 201
+
+java -jar -Xmx8000M psc-computer3in1.jar 236697 A/sift/ A/csift/ A/mosift/ example/bmatrix/sift/sift-bmatrix1-2 example/bmatrix/csift/csift-bmatrix1-2 example/bmatrix/mosift/mosift-bmatrix1-2 med12-3in1-concept346.models example/prediction/1.prediction 201
+
+}}}
