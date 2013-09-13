@@ -35,5 +35,9 @@ Example code:
 java -jar -Xmx8000M psc-computer3in1.jar 236697 A/sift/ A/csift/ A/mosift/ example/bmatrix/sift/sift-bmatrix0-2 example/bmatrix/csift/csift-bmatrix0-2 example/bmatrix/mosift/mosift-bmatrix0-2 med12-3in1-concept346.models example/prediction/0.prediction 201
 
 java -jar -Xmx8000M psc-computer3in1.jar 236697 A/sift/ A/csift/ A/mosift/ example/bmatrix/sift/sift-bmatrix1-2 example/bmatrix/csift/csift-bmatrix1-2 example/bmatrix/mosift/mosift-bmatrix1-2 med12-3in1-concept346.models example/prediction/1.prediction 201
-
 }}}
+
+
+== By Primal Objective Function ==
+
+[under construction]
