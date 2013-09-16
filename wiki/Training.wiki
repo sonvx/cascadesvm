@@ -1,7 +1,10 @@
 #labels Featured
 This page shows how to train on Hadoop using CascadeSVM.
 
-TODO: The training component is still under debugging, some instructions might be modified later.
+===The test package for this page is [http://www.cs.cmu.edu/~lujiang/applications/CascadeSVMTrain.jar here]===
+
+
+TODO: The training component is still under alpha test, some instructions might be modified later.
 
 = Preprocessing =
 
