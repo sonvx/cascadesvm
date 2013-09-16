@@ -91,7 +91,7 @@ public class CascadeSVMTrainParameter {
 			default:
 				throw(new CascadeSVMParameterFormatError("Illegal optional parameter."));
 			}
-			i++;
+			i += 2;
 		}
 		if (args.length - i != parameterSize) {
 			throw(new CascadeSVMParameterFormatError("Illegal parameter size."));

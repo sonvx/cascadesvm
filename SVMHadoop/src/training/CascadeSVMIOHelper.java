@@ -2,15 +2,15 @@ package training;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
-//import java.util.Iterator;
-
-
-
 
 import libsvm.svm_model;
 import libsvm.svm_node;
@@ -31,6 +31,15 @@ import org.apache.log4j.Logger;
 
 public class CascadeSVMIOHelper {
 	public static Logger logger = Logger.getLogger(CascadeSVMIOHelper.class);
+	static final String svm_type_table[] =
+	{
+		"c_svc","nu_svc","one_class","epsilon_svr","nu_svr",
+	};
+
+	static final String kernel_type_table[]=
+	{
+		"linear","polynomial","rbf","sigmoid","precomputed"
+	};
 	
 	/*
 	 * (Hadoop) Idlist
@@ -51,7 +60,7 @@ public class CascadeSVMIOHelper {
 			IntWritable value = new IntWritable();
 			while (reader.next(key, value)) {
 				idlist.add(new Integer(value.get()));
-				logger.info(value.toString());
+				// logger.info(value.toString());
 			}
 		} finally {
 			IOUtils.closeStream(reader);
@@ -59,6 +68,12 @@ public class CascadeSVMIOHelper {
 		logger.info("[END]readIdListHadoop("+pathString+")");
 		return idlist;
 	}
+	/**
+	 * rawId is stored in text format, each line is an id.
+	 * @param pathString
+	 * @return
+	 * @throws IOException
+	 */
 	public static ArrayList<Integer> readRawIdListHadoop(String pathString) throws IOException {
 		logger.info("[BEGIN]readRawIdListHadoop("+pathString+")");
 		ArrayList<Integer> idlist = new ArrayList<Integer>();
@@ -82,6 +97,12 @@ public class CascadeSVMIOHelper {
 		return idlist;
 	}
 	
+	/**
+	 * Write sequence file
+	 * @param pathString
+	 * @param idlist
+	 * @throws IOException
+	 */
 	public static void writeIdListHadoop(String pathString, ArrayList<Integer> idlist) throws IOException {
 		logger.info("[BEGIN]writeIdListHadoop("+pathString+")");
 		Configuration conf = new Configuration();
@@ -126,15 +147,13 @@ public class CascadeSVMIOHelper {
 //		logger.info("[END]writeIdListHadoop");
 //	}
 	
-	/*  New training instance for xi:
-	 * <label> 0:i 1:K(xi,x1) ... L:K(xi,xL) 
-	 * New testing instance for any x:
-	 * <label> 0:? 1:K(x,x1) ... L:K(x,xL) 
-	 * That is, in the training file the first column must be the "ID" of
-	 * xi. In testing, ? can be any value.
-	 * Shicheng: So... we can use id here?
-	 * Shicheng: No, we can't. We should use sequential id BEGIN from 1
-	 * So, the id of support vector should be convert into the original id when print them.
+	/**
+	 * The id of support vector should be convert into the original id when print them.
+	 * The SV id is store in sequence file.
+	 * @param pathString
+	 * @param model
+	 * @param idList
+	 * @throws IOException
 	 */
 	public static void writeSVIdListHadoop(String pathString, svm_model model, ArrayList<Integer> idList) throws IOException {
 		logger.info("[BEGIN]writeSVIdListHadoop("+pathString+")");
@@ -157,48 +176,9 @@ public class CascadeSVMIOHelper {
 		logger.info("[END]writeSVIdListHadoop("+pathString+")");
 	} 
 	
-//	/*
-//	 * (Local) Idlist
-//	 * One id per line.
-//	 */
-//	public static ArrayList<Integer> readIdListLocal(String path) throws IOException {
-//		logger.info("[BEGIN]readIdListLocal");
-//		ArrayList<Integer> idlist = new ArrayList<Integer>();
-//		BufferedReader reader = new BufferedReader(new FileReader(path));
-//		String line;
-//		while ((line = reader.readLine()) != null) {
-//			idlist.add(new Integer(line.trim()));
-//		}
-//		reader.close();
-//		logger.info("[END]readIdListLocal");
-//		return idlist;
-//	}
-//	
-//	public static void writeIdListLocal(String path, ArrayList<Integer> idlist) throws IOException {
-//		logger.info("[BEGIN]writeIdListLocal");
-//		BufferedWriter writer = new BufferedWriter(new FileWriter(path));
-//		for (int i = 0; i < idlist.size(); i++) {
-//			writer.write(idlist.get(i).toString());
-//			writer.newLine();
-//		}
-//		writer.close();
-//		logger.info("[END]writeIdListLocal");
-//	}
-	
-	/*
-	 * (Hadoop) Model
-	 * Single file.
+	/**
+	 * This is copied from libsvm, with only OutputStream type changed.
 	 */
-	static final String svm_type_table[] =
-	{
-		"c_svc","nu_svc","one_class","epsilon_svr","nu_svr",
-	};
-
-	static final String kernel_type_table[]=
-	{
-		"linear","polynomial","rbf","sigmoid","precomputed"
-	};
-	
 	public static void writeModelHadoop(String modelPath, svm_model model) throws IOException {
 		logger.info("[BEGIN]writeModelHadoop("+modelPath+")");
 		Configuration conf = new Configuration();
@@ -290,100 +270,11 @@ public class CascadeSVMIOHelper {
 		logger.info("[END]writeModelHadoop("+modelPath+")");
 	}
 	
-	/* 
-	 * Copied from libsvm. 
-	 */
-	public static void writeModelLocal(String model_file_name, svm_model model) throws IOException
-	{
-		logger.info("[BEGIN]writeModelLocal");
-		DataOutputStream fp = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(model_file_name)));
-
-		svm_parameter param = model.param;
-
-		fp.writeBytes("svm_type "+svm_type_table[param.svm_type]+"\n");
-		fp.writeBytes("kernel_type "+kernel_type_table[param.kernel_type]+"\n");
-
-		if(param.kernel_type == svm_parameter.POLY)
-			fp.writeBytes("degree "+param.degree+"\n");
-
-		if(param.kernel_type == svm_parameter.POLY ||
-		   param.kernel_type == svm_parameter.RBF ||
-		   param.kernel_type == svm_parameter.SIGMOID)
-			fp.writeBytes("gamma "+param.gamma+"\n");
-
-		if(param.kernel_type == svm_parameter.POLY ||
-		   param.kernel_type == svm_parameter.SIGMOID)
-			fp.writeBytes("coef0 "+param.coef0+"\n");
-
-		int nr_class = model.nr_class;
-		int l = model.l;
-		fp.writeBytes("nr_class "+nr_class+"\n");
-		fp.writeBytes("total_sv "+l+"\n");
-	
-		{
-			fp.writeBytes("rho");
-			for(int i=0;i<nr_class*(nr_class-1)/2;i++)
-				fp.writeBytes(" "+model.rho[i]);
-			fp.writeBytes("\n");
-		}
-	
-		if(model.label != null)
-		{
-			fp.writeBytes("label");
-			for(int i=0;i<nr_class;i++)
-				fp.writeBytes(" "+model.label[i]);
-			fp.writeBytes("\n");
-		}
-
-		if(model.probA != null) // regression has probA only
-		{
-			fp.writeBytes("probA");
-			for(int i=0;i<nr_class*(nr_class-1)/2;i++)
-				fp.writeBytes(" "+model.probA[i]);
-			fp.writeBytes("\n");
-		}
-		if(model.probB != null) 
-		{
-			fp.writeBytes("probB");
-			for(int i=0;i<nr_class*(nr_class-1)/2;i++)
-				fp.writeBytes(" "+model.probB[i]);
-			fp.writeBytes("\n");
-		}
-
-		if(model.nSV != null)
-		{
-			fp.writeBytes("nr_sv");
-			for(int i=0;i<nr_class;i++)
-				fp.writeBytes(" "+model.nSV[i]);
-			fp.writeBytes("\n");
-		}
-
-		fp.writeBytes("SV\n");
-		double[][] sv_coef = model.sv_coef;
-		svm_node[][] SV = model.SV;
-
-		for(int i=0;i<l;i++)
-		{
-			for(int j=0;j<nr_class-1;j++)
-				fp.writeBytes(sv_coef[j][i]+" ");
-
-			svm_node[] p = SV[i];
-			if(param.kernel_type == svm_parameter.PRECOMPUTED)
-				fp.writeBytes("0:"+(int)(p[0].value));
-			else	
-				for(int j=0;j<p.length;j++)
-					fp.writeBytes(p[j].index+":"+p[j].value+" ");
-			fp.writeBytes("\n");
-		}
-
-		fp.close();
-		logger.info("[END]writeModelHadoop");
-	}
-	
 	
 	/*
 	 * (Hadoop) SchedulerParameter
 	 * Each line is a parameter.
+	 * Sequence file.
 	 */
 	public static void writeSchedulerParameterHadoop(String pathString, CascadeSVMSchedulerParameter parameter) throws IOException {
 		logger.info("[BEGIN]writeSchedulerParameterHadoop("+pathString+")");
@@ -474,7 +365,7 @@ public class CascadeSVMIOHelper {
 		logger.info("[END]writeNodeParameterHadoop("+pathString+")");
 	}
 	
-	public static void writeNodeParameterHadoop(String pathString, ArrayList<CascadeSVMNodeParameter> parameters) throws IOException {
+	public static void writeNodeParametersHadoop(String pathString, ArrayList<CascadeSVMNodeParameter> parameters) throws IOException {
 		logger.info("[BEGIN]writeNodeParameterHadoop("+pathString+")");
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
@@ -522,8 +413,8 @@ public class CascadeSVMIOHelper {
 	
 	/*
 	 * (Hadoop) Label
-	 * key: id
-	 * value: label
+	 * Label is stored in text format
+	 * Each line is consist of two numbers, id and label, separated by a space.
 	 */
 	public static double[] readLabelHadoop(String pathString, ArrayList<Integer> idList) 
 			throws IOException {
@@ -542,7 +433,7 @@ public class CascadeSVMIOHelper {
 				double label = Double.parseDouble(splittted_line[1]);
 				if (idList.contains(id)) {
 					labels[idList.indexOf(id)] = label; 
-					logger.info(line);
+					// logger.info(line);
 				} 
 			}
 		}
@@ -574,43 +465,27 @@ public class CascadeSVMIOHelper {
 //		logger.info("[END]writeLabelHadoop("+pathString+")");
 //	}
 	
-//	/*
-//	 * (Local) Label
-//	 */
-//	public static double[] readLabelLocal(String path, ArrayList<Integer> idList)
-//		throws IOException {
-//		logger.info("[BEGIN]readLabelLocal");
-//		BufferedReader labelFile = new BufferedReader(new FileReader(path));
-//		double[] labels = new double[idList.size()];
-//		String line;
-//		while ((line = labelFile.readLine()) != null) {
-//			String[] valueArray = line.trim().split(" ");
-//			int id = Integer.parseInt(valueArray[0]);
-//			double label = Double.parseDouble(valueArray[1]);
-//			if (idList.contains(id)) {
-//				labels[idList.indexOf(id)] = label;
-//			}
-//		}
-//		labelFile.close();
-//		logger.info("[END]readLabelLocal");
-//		return labels;
-//	}
-	
 	public static double readLDHadoop(String pathString) throws IOException {
 		logger.info("[BEGIN]readLDHadoop("+pathString+")");
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
 		Path path = new Path(pathString);
-//		if (!fs.exists(path))
-//			return -1;
+		if (!fs.exists(path))
+		{
+			logger.info("[END]readLDHadoop(IOException)");
+			throw(new IOException());
+		}
 		FSDataInputStream in = fs.open(path);
+		BufferedReader reader = new BufferedReader(new InputStreamReader(in));
 		double LD = -1;
 		try {
-			LD = in.readDouble();
+			String line = reader.readLine();
+			LD = Double.parseDouble(line);
 		} finally {
+			reader.close();
 			IOUtils.closeStream(in);
 		}
-		logger.info("[END]readLDHadoop("+pathString+")");
+		logger.info("[END]readLDHadoop("+pathString+"), LD = "+Double.toString(LD));
 		return LD;
 	}
 	
@@ -620,9 +495,12 @@ public class CascadeSVMIOHelper {
 		FileSystem fs = FileSystem.get(conf);
 		Path path = new Path(pathString);
 		FSDataOutputStream out = fs.create(path);
+		BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out));
 		try {
-			out.writeDouble(LD);
+			writer.write(Double.toString(LD));
+			writer.newLine();
 		} finally {
+			writer.close();
 			IOUtils.closeStream(out);
 		}
 		logger.info("[END]writeLDHadoop("+pathString+")");
@@ -635,17 +513,168 @@ public class CascadeSVMIOHelper {
 //		return LD;
 //	}
 //	
-//	public static void writeLDLocal(String path, double LD) throws IOException {
-//		BufferedWriter writer = new BufferedWriter(new FileWriter(path));
-//		writer.write(Double.toString(LD));
-//		writer.close();
-//	}
 	
-	public static void copyFiles(String srcPathString, String desPathString) throws IOException {
+	public static void copyFileHadoop(String srcPathString, String desPathString) throws IOException {
 		Configuration conf = new Configuration();
 		FileSystem fs = FileSystem.get(conf);
 		Path srcPath = new Path(srcPathString);
 		Path desPath = new Path(desPathString);
 		FileUtil.copy(fs, srcPath, fs, desPath, false, true, conf);
+	}
+	
+	// http://stackoverflow.com/questions/17251640/how-to-see-hadoops-heap-use
+	public static void printMemory() {
+        logger.info("\nm:max-memory:"+(Runtime.getRuntime().maxMemory()/1024/1024)+
+                    "\nm:free-memory:"+(Runtime.getRuntime().freeMemory()/1024/1024)+
+                    "\nm:total:"+(Runtime.getRuntime().totalMemory()/1024/1024));
+	}
+	
+	public static ArrayList<Integer> readIdListLocal(String path) throws IOException {
+		logger.info("[BEGIN]readIdListLocal");
+		ArrayList<Integer> idlist = new ArrayList<Integer>();
+		BufferedReader reader = new BufferedReader(new FileReader(path));
+		String line;
+		while ((line = reader.readLine()) != null) {
+			idlist.add(new Integer(line.trim()));
+		}
+		reader.close();
+		logger.info("[END]readIdListLocal");
+		return idlist;
+	}
+	
+	public static void writeIdListLocal(String path, ArrayList<Integer> idlist) throws IOException {
+		logger.info("[BEGIN]writeIdListLocal");
+		BufferedWriter writer = new BufferedWriter(new FileWriter(path));
+		for (int i = 0; i < idlist.size(); i++) {
+			writer.write(idlist.get(i).toString());
+			writer.newLine();
+		}
+		writer.close();
+		logger.info("[END]writeIdListLocal");
+	}
+	
+	public static void writeSVIdListLocal(String path, svm_model model, ArrayList<Integer> idList) throws IOException {
+		logger.info("[BEGIN]writeSVIdListHadoop("+path+")");
+		BufferedWriter writer = new BufferedWriter(new FileWriter(path));
+		for (int i = 0; i < model.l; i++) {
+			writer.write(idList.get((int)model.SV[i][0].value - 1).toString());
+			writer.newLine();
+		}
+		writer.close();
+		logger.info("[END]writeSVIdListHadoop("+path+")");
+	} 
+	
+	public static double[] readLabelLocal(String path, ArrayList<Integer> idList)
+		throws IOException {
+		logger.info("[BEGIN]readLabelLocal");
+		BufferedReader labelFile = new BufferedReader(new FileReader(path));
+		double[] labels = new double[idList.size()];
+		String line;
+		while ((line = labelFile.readLine()) != null) {
+			String[] valueArray = line.trim().split(" ");
+			int id = Integer.parseInt(valueArray[0]);
+			double label = Double.parseDouble(valueArray[1]);
+			if (idList.contains(id)) {
+				labels[idList.indexOf(id)] = label;
+			}
+		}
+		labelFile.close();
+		logger.info("[END]readLabelLocal");
+		return labels;
+	}
+	
+	public static void writeLDLocal(String path, double LD) throws IOException {
+		logger.info("[BEGIN]writeLDLocal");
+		BufferedWriter writer = new BufferedWriter(new FileWriter(path));
+		writer.write(Double.toString(LD));
+		writer.close();
+		logger.info("[END]writeLDLocal");
+	}
+	
+	public static void writeModelLocal(String model_file_name, svm_model model) throws IOException
+	{
+		logger.info("[BEGIN]writeModelLocal");
+		DataOutputStream fp = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(model_file_name)));
+
+		svm_parameter param = model.param;
+
+		fp.writeBytes("svm_type "+svm_type_table[param.svm_type]+"\n");
+		fp.writeBytes("kernel_type "+kernel_type_table[param.kernel_type]+"\n");
+
+		if(param.kernel_type == svm_parameter.POLY)
+			fp.writeBytes("degree "+param.degree+"\n");
+
+		if(param.kernel_type == svm_parameter.POLY ||
+		   param.kernel_type == svm_parameter.RBF ||
+		   param.kernel_type == svm_parameter.SIGMOID)
+			fp.writeBytes("gamma "+param.gamma+"\n");
+
+		if(param.kernel_type == svm_parameter.POLY ||
+		   param.kernel_type == svm_parameter.SIGMOID)
+			fp.writeBytes("coef0 "+param.coef0+"\n");
+
+		int nr_class = model.nr_class;
+		int l = model.l;
+		fp.writeBytes("nr_class "+nr_class+"\n");
+		fp.writeBytes("total_sv "+l+"\n");
+	
+		{
+			fp.writeBytes("rho");
+			for(int i=0;i<nr_class*(nr_class-1)/2;i++)
+				fp.writeBytes(" "+model.rho[i]);
+			fp.writeBytes("\n");
+		}
+	
+		if(model.label != null)
+		{
+			fp.writeBytes("label");
+			for(int i=0;i<nr_class;i++)
+				fp.writeBytes(" "+model.label[i]);
+			fp.writeBytes("\n");
+		}
+
+		if(model.probA != null) // regression has probA only
+		{
+			fp.writeBytes("probA");
+			for(int i=0;i<nr_class*(nr_class-1)/2;i++)
+				fp.writeBytes(" "+model.probA[i]);
+			fp.writeBytes("\n");
+		}
+		if(model.probB != null) 
+		{
+			fp.writeBytes("probB");
+			for(int i=0;i<nr_class*(nr_class-1)/2;i++)
+				fp.writeBytes(" "+model.probB[i]);
+			fp.writeBytes("\n");
+		}
+
+		if(model.nSV != null)
+		{
+			fp.writeBytes("nr_sv");
+			for(int i=0;i<nr_class;i++)
+				fp.writeBytes(" "+model.nSV[i]);
+			fp.writeBytes("\n");
+		}
+
+		fp.writeBytes("SV\n");
+		double[][] sv_coef = model.sv_coef;
+		svm_node[][] SV = model.SV;
+
+		for(int i=0;i<l;i++)
+		{
+			for(int j=0;j<nr_class-1;j++)
+				fp.writeBytes(sv_coef[j][i]+" ");
+
+			svm_node[] p = SV[i];
+			if(param.kernel_type == svm_parameter.PRECOMPUTED)
+				fp.writeBytes("0:"+(int)(p[0].value));
+			else	
+				for(int j=0;j<p.length;j++)
+					fp.writeBytes(p[j].index+":"+p[j].value+" ");
+			fp.writeBytes("\n");
+		}
+
+		fp.close();
+		logger.info("[END]writeModelHadoop");
 	}
 }

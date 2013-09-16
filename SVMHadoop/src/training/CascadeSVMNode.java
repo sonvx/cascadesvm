@@ -34,13 +34,17 @@ public class CascadeSVMNode extends MapReduceBase
 		implements Mapper<IntWritable, Text, IntWritable, Text>,
 		Reducer<IntWritable, Text, NullWritable, NullWritable> {
 	private static Logger logger;
-	private static double[] tune_parameter; // = {0.125d};
+	private static double[] tune_C; // = {0.125d};
+	private static double[] tune_gamma;
 	private static int randomSeed;
 	static {
 		logger = Logger.getLogger(CascadeSVMNode.class);
-		tune_parameter = new double[11];
-		for (int i = 0; i < 11; i++)
-			tune_parameter[i] = Math.pow(2, (i-5));
+		tune_C = new double[5];
+		for (int i = 0; i < 5; i++)
+			tune_C[i] = Math.pow(2, i-2);
+		tune_gamma = new double[3];
+		for (int i = 0; i < 3; i++)
+			tune_gamma[i] = Math.pow(2, i-1);
 		randomSeed = 0;
 	}
 
@@ -49,6 +53,7 @@ public class CascadeSVMNode extends MapReduceBase
 			OutputCollector<IntWritable, Text> output, Reporter reporter)
 			throws IOException {
 		logger.info("[BEGIN]map()");
+		logger.info(value.toString());
 		CascadeSVMNodeParameter parameter = null;
 		try {
 			parameter = new CascadeSVMNodeParameter(value.toString());
@@ -69,14 +74,18 @@ public class CascadeSVMNode extends MapReduceBase
 		reporter.setStatus("project kernel");
 		float[][] kernel = projectKernelHadoop(parameter, idList);
 		logger.info("kernel size = " + kernel.length + " x " + kernel[0].length);
+		logger.info("kernel[0][0] = " + Float.toString(kernel[0][0]));
+		logger.info("kernel[0][1] = " + Float.toString(kernel[0][1]));
+		CascadeSVMIOHelper.printMemory();
 		
 		reporter.setStatus("create problem");
 		svm_problem problem = createSVMProblem(idList, kernel, labels);
 		
+		CascadeSVMIOHelper.printMemory();
 		kernel = null; // GC
 		
 		reporter.setStatus("cross validation");
-		svm_parameter param = crossValidation(problem, parameter.nFold);
+		svm_parameter param = crossValidationHadoop(problem, parameter.nFold, reporter);
 		
 		reporter.setStatus("svm train");
 		svm_model model = svm.svm_train(problem, param);
@@ -102,6 +111,36 @@ public class CascadeSVMNode extends MapReduceBase
 		// Nothing to do.
 	}
 	
+	public static void runNodeJob(CascadeSVMSchedulerParameter parameter, String nodeParameterPath, int startId, int endId, JobConf oldConf) throws IOException {
+		logger.info("[BEGIN]runNodeJob()");
+		// JobConf conf = new JobConf(CascadeSVMNode.class);
+		JobConf conf = new JobConf(oldConf); // inherit job conf from old conf
+		// CascadeSVMNode (iteration 1, nodes 0-7)
+		conf.setJobName("CascadeSVMNode (iteration " + Integer.toString(parameter.iterationId) + ", nodes " + startId + "-" + endId + ")");
+		FileInputFormat.setInputPaths(conf, new Path(nodeParameterPath));
+		conf.setMapperClass(CascadeSVMNode.class);
+		conf.setReducerClass(CascadeSVMNode.class);
+		conf.setInputFormat(SequenceFileInputFormat.class);
+		conf.setOutputFormat(NullOutputFormat.class);
+		conf.setMapOutputKeyClass(IntWritable.class);
+		conf.setMapOutputValueClass(Text.class);
+		
+    	conf.set("mapred.child.java.opts", "-Xmx1600m");		//cannot be too large <2000m
+		
+		conf.set("mapred.cluster.map.memory.mb","2048");
+		conf.set("mapred.cluster.reduce.memory.mb","2048");
+		
+		conf.set("mapred.job.map.memory.mb","2048");
+		conf.set("mapred.job.reduce.memory.mb","2048");
+		conf.set("mapred.tasktracker.map.tasks.maximum", Integer.toString(endId-startId+1));
+		conf.set("mapred.map.max.attempts","8");
+		conf.set("mapred.reduce.max.attempts","8");
+		
+		JobClient client = new JobClient(conf);
+		client.submitJob(conf);
+		logger.info("[END]runNodeJob()");
+	}
+	
 	public float[][] projectKernelHadoop(CascadeSVMNodeParameter parameter, ArrayList<Integer> idList) throws IOException {
 		logger.info("[BEGIN]projectKernelHadoop()");
 		KernelProjector projector = new KernelProjector();
@@ -110,7 +149,50 @@ public class CascadeSVMNode extends MapReduceBase
 		float[][] kernel = projector.projectHadoop(fs, parameter.kernelPath, idList, parameter.nData);
 		logger.info("[END]projectKernelHadoop()");
 		return kernel;
-	} 
+	}
+	
+	@SuppressWarnings("unchecked")
+	public svm_parameter crossValidationHadoop(svm_problem problem, int nrFold, Reporter reporter) {
+		 logger.info("[BEGIN]crossValidation()");
+		 double[] target = new double[problem.y.length];
+		 ArrayList<Double>[] probabilities = new ArrayList[problem.l+1];
+		 for (int i = 0; i < problem.l + 1; i++)
+			 probabilities[i] = new ArrayList<Double>();
+		 
+		 double bestMap = 0;
+		 double bestGamma = 1;
+		 double bestC = 1;
+		 svm_parameter parameter = getDefaultParams(); 
+		 double scale;
+		 for (int i = 0; i < tune_gamma.length; i++) {
+			 scale = (i==0 ? tune_gamma[i] : tune_gamma[i] / tune_gamma[i - 1]);
+			 changeProblem(problem, scale);
+			 for (int j = 0; j < tune_C.length; j++) {
+				 reporter.setStatus("cross validation: gamma = " + Double.toString(tune_gamma[i]) + "C = " + Double.toString(tune_C[i]));
+				 parameter.C = tune_C[i];
+				 svm.svm_cross_validation(problem, parameter, nrFold, target, probabilities);
+				 logger.info("probabilities[0]" + probabilities[0].toString());
+				 logger.info("probabilities[1]" + probabilities[1].toString());
+				 double map = computeAveragePrecision(problem.y, probabilities);
+				 if (map > bestMap)
+				 {
+					 bestMap = map;
+					 bestGamma = tune_gamma[i];
+					 bestC = tune_C[j];
+				 }
+			 }
+		 }
+		 /*Change problem to best parameter*/
+		 scale = bestGamma / tune_gamma[tune_gamma.length - 1];
+		 changeProblem(problem, scale);
+		 svm_parameter bestParameter = getDefaultParams();
+		 bestParameter.C = bestC;
+		 logger.info("bestMap: "+Double.toString(bestMap));
+		 logger.info("bestGamma = " + Double.toString(bestGamma));
+		 logger.info("bestC: " + Double.toString(bestC));
+		 logger.info("[END]crossValidation()");
+		 return bestParameter;
+	}
 
 	public svm_problem createSVMProblem(ArrayList<Integer> idList, float[][] kernel, double[] labels) {
 		logger.info("[BEGIN]createSVMProblem");
@@ -119,8 +201,9 @@ public class CascadeSVMNode extends MapReduceBase
 		prob.l = kernel.length;
 		int m = kernel[0].length + 1;
 		
-		prob.x = new svm_node[prob.l][m];
+		prob.x = new svm_node[prob.l][];
 		for (int i = 0; i < prob.l; i++) {
+			prob.x[i] = new svm_node[m];
 			prob.x[i][0] = new svm_node();
 			prob.x[i][0].index = 0;
 			prob.x[i][0].value = i + 1;
@@ -136,44 +219,6 @@ public class CascadeSVMNode extends MapReduceBase
 		return prob;
 	}
 
-	@SuppressWarnings("unchecked")
-	public svm_parameter crossValidation(svm_problem problem, int nrFold) {
-		 logger.info("[BEGIN]crossValidation()");
-		 double[] target = new double[problem.y.length];
-		 ArrayList<Double>[] probabilities = new ArrayList[problem.l+1];
-		 for (int i = 0; i < problem.l + 1; i++)
-			 probabilities[i] = new ArrayList<Double>();
-		 
-		 double bestMap = 0;
-		 double bestGamma = 1;
-		 double bestC = 1;
-		 svm_parameter parameter = getDefaultParams(); 
-		 double scale;
-		 for (int i = 0; i < tune_parameter.length; i++) {
-			 scale = (i==0 ? tune_parameter[i] : tune_parameter[i] / tune_parameter[i - 1]);
-			 changeProblem(problem, scale);
-			 for (int j = 0; j < tune_parameter.length; j++) {
-				 parameter.C = tune_parameter[i];
-				 svm.svm_cross_validation(problem, parameter, nrFold, target, probabilities);
-				 logger.info("probabilities[0]" + probabilities[0].toString());
-				 logger.info("probabilities[1]" + probabilities[1].toString());
-				 double map = computeAveragePrecision(problem.y, probabilities);
-				 if (map > bestMap)
-				 {
-					 bestMap = map;
-					 bestGamma = tune_parameter[i];
-					 bestC = parameter.C;
-				 }
-			 }
-		 }
-		 /*Change problem to best parameter*/
-		 scale = bestGamma / tune_parameter[tune_parameter.length - 1];
-		 changeProblem(problem, scale);
-		 svm_parameter bestParameter = getDefaultParams();
-		 bestParameter.C = bestC;
-		 logger.info("[END]crossValidation()");
-		 return bestParameter;
-	}
 	
 	public double computeLD(svm_model model, svm_problem problem) {
 		logger.info("[BEGIN]computeLD()");
@@ -258,7 +303,7 @@ public class CascadeSVMNode extends MapReduceBase
 	}
 
 	public double[] calculateAP(ArrayList<CrossValidationItem> crossValidationItems) {
-		logger.info("[BEGIN]calculateAP()");
+		// logger.info("[BEGIN]calculateAP()");
 		double[] result = new double[2];
 		result[0] = 0;
 		result[1] = -1;
@@ -280,112 +325,151 @@ public class CascadeSVMNode extends MapReduceBase
 				result[0] += cur_precision*deltaRecall;
 			}
 		}
-		logger.info("[END]calculateAP()");
+		// logger.info("[END]calculateAP()");
 		return result;
 	}
 	
-	// TEST
-	public static void main(String[] args) {
-		logger.info("[BEGIN]main()");
-		try {
-			CascadeSVMNodeParameter parameter = new CascadeSVMNodeParameter();
-			parameter.modelPath  = "shicheng/cascadesvm/workDir/model.1.0";
-			parameter.SVPath     = "shicheng/cascadesvm/workDir/sv.1.0";
-			parameter.LDPath     = "shicheng/cascadesvm/workDir/LD.1.0";
-			parameter.kernelPath = "shicheng/cascadesvm/sin10000";
-			parameter.labelPath  = "shicheng/cascadesvm/10000.labels";
-			parameter.idlistPath = "shicheng/cascadesvm/100.idlist.sequence";
-			parameter.workDir	 = "shicheng/cascadesvm/workDir";
-			parameter.nFold		 = 5;
-			parameter.nData 	 = 10000;
-			String nodeParameterPath = CascadeSVMPathHelper.getNodeParameterPath(parameter.workDir);
-			CascadeSVMIOHelper.writeNodeParameterHadoop(nodeParameterPath, parameter);
+	// Local version
 
-			JobConf conf = new JobConf(CascadeSVMTrain.class);
-			conf.setJobName("CascadeSVMNode Test");
-			FileInputFormat.addInputPath(conf, new Path(nodeParameterPath));
-			conf.setMapperClass(CascadeSVMNode.class);
-			conf.setReducerClass(CascadeSVMNode.class);
-			conf.setInputFormat(SequenceFileInputFormat.class);
-			conf.setOutputFormat(NullOutputFormat.class);
-			
-	    	conf.set("mapred.child.java.opts", "-Xmx1200m");		//cannot be too large <2000m
-			
-			conf.set("mapred.cluster.map.memory.mb","2000");
-			conf.set("mapred.cluster.reduce.memory.mb","2000");
-			
-			conf.set("mapred.job.map.memory.mb","2000");
-			conf.set("mapred.job.reduce.memory.mb","2000");
-			conf.set("mapred.tasktracker.map.tasks.maximum","1");
-			conf.set("mapred.map.max.attempts","3");
-			conf.set("mapred.reduce.max.attempts","3");
-			
-			JobClient.runJob(conf);
-		}
-		catch (IOException e) {
-			// e.printStackTrace();
-			logger.info("[ERROR]IO Exception.");
-		}
-		logger.info("[END]main()");
+	public void trainLocal(CascadeSVMNodeParameter parameter) throws IOException {
+		logger.info("[Begin]trainLocal()");
+		svm.rand.setSeed(randomSeed);
+		ArrayList<Integer> idList = CascadeSVMIOHelper.readIdListLocal(parameter.idlistPath);
+		double[] labels = CascadeSVMIOHelper.readLabelLocal(parameter.labelPath, idList);
+		float[][] kernel = projectKernelLocal(parameter, idList);
+		logger.info("kernel[0][0] = " + Float.toString(kernel[0][0]));
+		logger.info("kernel[0][1] = " + Float.toString(kernel[0][1]));
+		svm_problem problem = createSVMProblem(idList, kernel, labels);
+		kernel = null;  // GC
+		svm_parameter param = crossValidationLocal(problem, parameter.nFold);
+		svm_model model = svm.svm_train(problem, param); 													 // train
+		CascadeSVMIOHelper.writeModelLocal(parameter.modelPath, model);												 // output model
+		CascadeSVMIOHelper.writeSVIdListLocal(parameter.SVPath, model, idList);
+		double LD = computeLD(model, problem);
+		CascadeSVMIOHelper.writeLDLocal(parameter.LDPath, LD);
+		logger.info("[End]trainLocal()");
 	}
 	
-	// TEST
-
-//	public CascadeSVMNode(
-//			String kerneLDath, 
-//			String labeLDath, 
-//			String idListPath, 
-//			int nrFold, 
-//			String modelOutputPath,
-//			String SVIdOutputPath)
-//					throws NumberFormatException, FileNotFoundException, IOException {
-//		logger.info("[Begin]CascadeSVMNode");
-//		svm.rand.setSeed(randomSeed);
-//		idList = readIdList(new BufferedReader(new FileReader(idListPath)));  read id list
-//		double[] labels = readLabel(idList, new BufferedReader(new FileReader(labeLDath)));		 read label
-//		float[][] kernel = projectKernel(new BufferedReader(new FileReader(kerneLDath)), idList);								 project kernel
-//		problem = convert2SVMProblem(idList, kernel, labels);									 create svm problem
-//		kernel = null;  GC
-//		svm_parameter param = crossValidation(problem, nrFold, randomSeed);						 cross validation
-//		model = svm.svm_train(problem, param); 													 train
-//		svm.svm_save_model(modelOutputPath, model);												 output model
-//		writeSVId(new BufferedWriter(new FileWriter(SVIdOutputPath)));
-//		logger.info("[End]CascadeSVMNode");
-//	}
-//	
-//	public void writeLD(String LDOutputPath) throws IOException {
-//		BufferedWriter writer = new BufferedWriter(new FileWriter(LDOutputPath));
-//		double LD = computeLD();
-//		writer.write(Double.toString(LD));
-//		writer.close();
-//	}
-//	
-//	private ArrayList<Integer> readIdList(BufferedReader idListFile)
-//			throws NumberFormatException, IOException {
-//		logger.info("[Begin]readIdList");
-//		ArrayList<Integer> idList = new ArrayList<Integer>();
-//		String line;
-//		while ((line = idListFile.readLine()) != null) {
-//			int id = Integer.parseInt(line);
-//			idList.add(new Integer(id));
+	public float[][] projectKernelLocal(CascadeSVMNodeParameter parameter, ArrayList<Integer> idList) throws IOException {
+		logger.info("[BEGIN]projectKernelHadoop()");
+		KernelProjector projector = new KernelProjector();
+		Configuration conf = new Configuration();
+		FileSystem fs = FileSystem.get(conf);
+		float[][] kernel = projector.projectHadoop(fs, parameter.kernelPath, idList, parameter.nData);
+//		KernelProjector projector = new KernelProjector();
+//		float[][] kernel = projector.project(new File(parameter.kernelPath), idList, parameter.nData);
+		logger.info("[END]projectKernelHadoop()");
+		return kernel;
+	} 
+	
+	@SuppressWarnings("unchecked")
+	public svm_parameter crossValidationLocal(svm_problem problem, int nrFold) {
+		 logger.info("[BEGIN]crossValidation()");
+		 double[] target = new double[problem.y.length];
+		 ArrayList<Double>[] probabilities = new ArrayList[problem.l+1];
+		 for (int i = 0; i < problem.l + 1; i++)
+			 probabilities[i] = new ArrayList<Double>();
+		 
+		 double bestMap = 0;
+		 double bestGamma = 1;
+		 double bestC = 1;
+		 svm_parameter parameter = getDefaultParams(); 
+		 double scale;
+		 for (int i = 0; i < tune_gamma.length; i++) {
+			 scale = (i==0 ? tune_gamma[i] : tune_gamma[i] / tune_gamma[i - 1]);
+			 changeProblem(problem, scale);
+			 for (int j = 0; j < tune_C.length; j++) {
+				 parameter.C = tune_C[i];
+				 svm.svm_cross_validation(problem, parameter, nrFold, target, probabilities);
+				 logger.info("probabilities[0]" + probabilities[0].toString());
+				 logger.info("probabilities[1]" + probabilities[1].toString());
+				 double map = computeAveragePrecision(problem.y, probabilities);
+				 if (map > bestMap)
+				 {
+					 bestMap = map;
+					 bestGamma = tune_gamma[i];
+					 bestC = tune_C[j];
+				 }
+			 }
+		 }
+		 /*Change problem to best parameter*/
+		 scale = bestGamma / tune_gamma[tune_gamma.length - 1];
+		 changeProblem(problem, scale);
+		 svm_parameter bestParameter = getDefaultParams();
+		 bestParameter.C = bestC;
+		 logger.info("bestMap: "+Double.toString(bestMap));
+		 logger.info("bestGamma = " + Double.toString(bestGamma));
+		 logger.info("bestC: " + Double.toString(bestC));
+		 logger.info("[END]crossValidation()");
+		 return bestParameter;
+	}
+	
+	// TEST Hadoop
+//	public static void main(String[] args) {
+//		logger.info("[BEGIN]main()");
+//		try {
+//			CascadeSVMNodeParameter parameter = new CascadeSVMNodeParameter();
+//			parameter.modelPath  = "shicheng/cascadesvm/workDir/model.1.0";
+//			parameter.SVPath     = "shicheng/cascadesvm/workDir/sv.1.0";
+//			parameter.LDPath     = "shicheng/cascadesvm/workDir/LD.1.0";
+//			parameter.kernelPath = "shicheng/cascadesvm/sin10000";
+//			parameter.labelPath  = "shicheng/cascadesvm/10000.labels";
+//			parameter.idlistPath = "shicheng/cascadesvm/100.idlist.sequence";
+//			parameter.workDir	 = "shicheng/cascadesvm/workDir";
+//			parameter.nFold		 = 5;
+//			parameter.nData 	 = 10000;
+//			String nodeParameterPath = CascadeSVMPathHelper.getNodeParameterPath(parameter.workDir);
+//			CascadeSVMIOHelper.writeNodeParameterHadoop(nodeParameterPath, parameter);
+//
+//			JobConf conf = new JobConf(CascadeSVMNode.class);
+//			conf.setJobName("CascadeSVMNode Test");
+//			FileInputFormat.addInputPath(conf, new Path(nodeParameterPath));
+//			conf.setMapperClass(CascadeSVMNode.class);
+//			conf.setReducerClass(CascadeSVMNode.class);
+//			conf.setInputFormat(SequenceFileInputFormat.class);
+//			conf.setOutputFormat(NullOutputFormat.class);
+//			conf.setMapOutputKeyClass(IntWritable.class);
+//			conf.setMapOutputValueClass(Text.class);
+//			
+//	    	conf.set("mapred.child.java.opts", "-Xmx1200m");		//cannot be too large <2000m
+//			
+//			conf.set("mapred.cluster.map.memory.mb","2000");
+//			conf.set("mapred.cluster.reduce.memory.mb","2000");
+//			
+//			conf.set("mapred.job.map.memory.mb","2000");
+//			conf.set("mapred.job.reduce.memory.mb","2000");
+//			conf.set("mapred.tasktracker.map.tasks.maximum","1");
+//			conf.set("mapred.map.max.attempts","3");
+//			conf.set("mapred.reduce.max.attempts","3");
+//			
+//			JobClient.runJob(conf);
 //		}
-//		idListFile.close();
-//		// Sort the id list
-//		Collections.sort(idList);
-//		logger.info("[End]readIdList");
-//		return idList;
-//	}
-//	
-//	private void writeSVId(BufferedWriter SVIdOutputFile) throws IOException {
-//		logger.info("[BEGIN]writeSVId");
-//		for (int i = 0; i < model.l; i++) {
-//			SVIdOutputFile.write(Integer.toString(idList.get((int)model.SV[i][0].value - 1)));
-//			SVIdOutputFile.newLine();
+//		catch (IOException e) {
+//			// e.printStackTrace();
+//			logger.info("[ERROR]IO Exception.");
 //		}
-//		SVIdOutputFile.close();
-//		logger.info("[End]writeSVId");
+//		logger.info("[END]main()");
 //	}
-//	
+	
+	// Test Local
+	public static void main(String[] args) {
+		CascadeSVMNodeParameter parameter = new CascadeSVMNodeParameter();
+		parameter.modelPath  = "C:\\Users\\Light\\JavaJar\\workDir\\model.1.0";
+		parameter.SVPath     = "C:\\Users\\Light\\JavaJar\\workDir\\sv.1.0";
+		parameter.LDPath     = "C:\\Users\\Light\\JavaJar\\workDir\\LD.1.0";
+		parameter.kernelPath = "C:\\Users\\Light\\JavaJar\\sin10000";
+		parameter.labelPath  = "C:\\Users\\Light\\JavaJar\\10000.labels";
+		parameter.idlistPath = "C:\\Users\\Light\\JavaJar\\100.idlist";
+		parameter.workDir	 = "C:\\Users\\Light\\JavaJar\\workDir";
+		parameter.nFold		 = 5;
+		parameter.nData 	 = 10000;
+		try {
+			new CascadeSVMNode().trainLocal(parameter);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
 //	/**
 //	 * This is the self-debug version.
 //	 * @param kerneLDath
@@ -420,23 +504,5 @@ public class CascadeSVMNode extends MapReduceBase
 //		kernelFile.close();
 //		logger.info("[End]projectKernel");
 //		return kernel;
-//	}
-//	
-//	public static void main(String[] args) {
-//		String kerneLDath = "/home/lightxu/Work/cascadesvm_note/train_single/kernel.txt";
-//		String labeLDath = "/home/lightxu/Work/cascadesvm_note/train_single/label.txt"; 
-//		String idListPath = "/home/lightxu/Work/cascadesvm_note/train_single/idlist.txt";
-//		int nrFold = 5;
-//		String modelOutputPath = "/home/lightxu/Work/cascadesvm_note/train_single/model.txt";
-//		String SVIdOutputPath = "/home/lightxu/Work/cascadesvm_note/train_single/svid.txt";
-//		try {
-//			CascadeSVMNode svm = new CascadeSVMNode(kerneLDath, labeLDath, idListPath, nrFold, modelOutputPath, SVIdOutputPath);
-//			double LD = svm.computeLD();
-//			System.out.println(LD);
-//		} catch (NumberFormatException e) {
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
 //	}
 }
