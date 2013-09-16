@@ -42,7 +42,7 @@ public class CascadeSVMTrain {
 			parameter.nData = idList.size();
 			CascadeSVMPartitioner.partitionIdListHadoop(parameter, idList);
 			String schedulerParameterPath = writeSchedulerParameter(parameter);
-			// CascadeSVMScheduler.runSchedulerJob(schedulerParameterPath);
+			CascadeSVMScheduler.runSchedulerJob(schedulerParameterPath);
 		}
 		catch (CascadeSVMParameterFormatError e) {
 			logger.info(e.toString());
