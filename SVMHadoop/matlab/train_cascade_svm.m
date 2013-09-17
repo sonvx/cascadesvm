@@ -2,11 +2,17 @@
 % Function: train_cascade_svm
 % Author: Shicheng Xu
 % E-mail: lightxuzju@gmail.com
-% Input parameters:
-%   train_label: N x 1 vector
-%   train_matrix: N x M matrix, N instances, M features
-%   subset_num: count of subsets of cascade svm, 8, 16, 32, 64....
-function [model, models, train_subset_ids, Lp, total_pass] = train_cascade_svm(train_label, train_matrix, subset_count)
+%  Input parameter:
+%    train_label: n x 1 vector, where n is the size of instances.
+%    train_matrix: n x m matrix, where m is the dimension of features.
+%    subset_num: the number of splitted subsets.
+%  Return values:
+%    model: the final model, in libsvm format.
+%    models: the intermediate models, referenced by models{pass}{layer}{subset}.
+%    train_subset_ids: the ids of each subset, referenced by train_subset_ids{pass}{layer}{subset}.
+%    LDs: the optimal dual form objective function value of each subset solved by libsvm, referenced by LDs{pass}{layer}{subset}.
+%    total_pass: the total pass before convergence.
+function [model, models, train_subset_ids, LDs, total_pass] = train_cascade_svm(train_label, train_matrix, subset_count)
     tic;
     N = size(train_label, 1);
     subset_N = floor(N / subset_count);
@@ -32,7 +38,7 @@ function [model, models, train_subset_ids, Lp, total_pass] = train_cascade_svm(t
     MAX_PASSES = 10; % Assume the cascade svm will convergence in 10 passes.
     models = cell(1, MAX_PASSES);
     train_subset_ids = cell(1, MAX_PASSES);
-    Lp = cell(1, MAX_PASSES);
+    LDs = cell(1, MAX_PASSES);
     convergence = false;
     more_train_id = [];
     for pass=1:MAX_PASSES
@@ -40,17 +46,17 @@ function [model, models, train_subset_ids, Lp, total_pass] = train_cascade_svm(t
         
         models{pass} = cell(1, layer_size);
         train_subset_ids{pass} = cell(1, layer_size);
-        Lp{pass} = cell(1, MAX_PASSES);
+        LDs{pass} = cell(1, MAX_PASSES);
         
-        train_ids = randperm(N);
-%         train_ids = gen_unbalanced_data(train_label, subset_count);
+        train_ids = randperm(N); % Split data set randomly
+%         train_ids = gen_unbalanced_data(train_label, subset_count); % Split data set unbalancely
         subset_count_now = subset_count;
         for i = 1:layer_size
             fprintf('\t[LAYER] %d\n', i);
             
             models{pass}{i} = cell(1, subset_count_now);
             train_subset_ids{pass}{i} = cell(1, subset_count_now);
-            Lp{pass}{i} = cell(1, subset_count_now);
+            LDs{pass}{i} = cell(1, subset_count_now);
             
             for j = 1:subset_count_now
                 if (i == 1)
@@ -67,14 +73,14 @@ function [model, models, train_subset_ids, Lp, total_pass] = train_cascade_svm(t
                 [sub_train_label, sub_train_kernel] = get_subset(train_subset_ids{pass}{i}{j}, train_label, train_kernel);
                 models{pass}{i}{j} = svmtrain(sub_train_label, sub_train_kernel, '-q -c 1 -t 4');
                 models{pass}{i}{j}.SVs = train_subset_ids{pass}{i}{j}(models{pass}{i}{j}.SVs);
-                Lp{pass}{i}{j} = svm_lagrangian(models{pass}{i}{j}, train_label, train_kernel);
+                LDs{pass}{i}{j} = svm_lagrangian(models{pass}{i}{j}, train_label, train_kernel);
                 
                 fprintf('\t\t\tTotal nSV = %d\n', models{pass}{i}{j}.totalSV);
-                fprintf('\t\t\tLp = %f\n', Lp{pass}{i}{j});
+                fprintf('\t\t\tLDs = %f\n', LDs{pass}{i}{j});
             end
    
             if (pass > 1 && i == 1)
-                if (is_convergence(Lp{pass - 1}{layer_size}{1}, Lp{pass}{1}))
+                if (is_convergence(LDs{pass - 1}{layer_size}{1}, LDs{pass}{1}))
                     convergence = true;
                     model = models{pass - 1}{layer_size}{1};
                     total_pass = pass - 1;
@@ -103,22 +109,22 @@ function [sub_label, sub_kernel] = get_subset(ids, label, kernel)
     sub_kernel = [(1:n)', kernel(ids, ids)];
 end
 
-function convergence_flag = is_convergence(Lp_last, Lp_firsts)
-    max_Lp_first = -Inf;
-    size_models = size(Lp_firsts, 2);
+function convergence_flag = is_convergence(LD_last, LD_firsts)
+    max_LD_first = -Inf;
+    size_models = size(LD_firsts, 2);
     for i = 1:size_models
-        Lp_first = Lp_firsts{i};
-        if (Lp_first > max_Lp_first)
-            max_Lp_first = Lp_first;
+        LD_first = LD_firsts{i};
+        if (LD_first > max_LD_first)
+            max_LD_first = LD_first;
         end
     end
-    if ((max_Lp_first - Lp_last) / Lp_last < 1e-5)
+    if ((max_LD_first - LD_last) / LD_last < 1e-5)
         convergence_flag = true;
     else
         convergence_flag = false;
     end
-    fprintf('Lp_last = %f\n', Lp_last);
-    fprintf('max_Lp_first = %f\n', max_Lp_first);
+    fprintf('LD_last = %f\n', LD_last);
+    fprintf('max_LD_first = %f\n', max_LD_first);
 end
 
 function train_ids = gen_unbalanced_data(train_label, subset_count)
