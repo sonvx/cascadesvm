@@ -1,0 +1,22 @@
+#summary Instructions on how to use our tools.
+
+This is a multi-class SVM classifier for "Big Data" on Hadoop.
+
+  * [HowtoComputerKernel How to compute a big kernel matrix]
+  * [Training How to train a binary classifier]
+  * [CascadeTest How to do the prediction]
+  * [CiteCascadeSVM How to cite this tool]
+  <wiki:comment>* [https://groups.google.com/forum/#!forum/cascadesvm_discussion Discussion Group for Q&A]</wiki:comment>
+
+
+Resources:
+
+[http://www.cs.cmu.edu/~lujiang/resources/cascadesvm_appendix.pdf The proof of the convergence to the global optimal solution].
+
+[http://hadoop.apache.org/docs/r0.18.3/hdfs_shell.html Hadoop Shell Commands ]
+
+
+
+Check out the video that shows the convergence process on toy examples.
+
+<wiki:video url="http://www.youtube.com/watch?v=oIKyZv3NGK0"/>
