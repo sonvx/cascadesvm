@@ -1,5 +1,5 @@
   * [HowtoComputerKernel How to compute a big kernel matrix]
-  * [Training How to train a binary classifier]
+  * [CascadeSVMTrain How to train a binary classifier]
   * [CascadeTest How to do the prediction]
   * [CiteCascadeSVM How to cite this tool]
   * [CascadeSVMMatlabVersion Matlab version of CascadeSVM]
