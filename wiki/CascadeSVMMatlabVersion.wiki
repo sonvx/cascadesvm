@@ -40,6 +40,6 @@ Other code are used to run the experiment on toy examples, basically run_experim
 
 = Reference =
 
-[1]. Graf, Hans P., et al. "Parallel support vector machines: The cascade svm." Advances in neural information processing systems. 2004.
+1. Graf, Hans P., et al. "Parallel support vector machines: The cascade svm." Advances in neural information processing systems. 2004.
 
-[2]. LibSVM Home page: http://www.csie.ntu.edu.tw/~cjlin/libsvm/
+2. LibSVM Home page: http://www.csie.ntu.edu.tw/~cjlin/libsvm/
