@@ -3,7 +3,7 @@
 This is a multi-class SVM classifier for "Big Data" on Hadoop.
 
   * [HowtoComputerKernel How to compute a big kernel matrix]
-  * [Training How to train a binary classifier]
+  * [CascadeSVMTrain How to train a binary classifier]
   * [CascadeTest How to do the prediction]
   * [CiteCascadeSVM How to cite this tool]
   <wiki:comment>* [https://groups.google.com/forum/#!forum/cascadesvm_discussion Discussion Group for Q&A]</wiki:comment>
