@@ -1,4 +1,5 @@
-#How to do the prediction
+#summary How to do the prediction
+#labels Featured
 
 == By Dual Objective Function ==
 
