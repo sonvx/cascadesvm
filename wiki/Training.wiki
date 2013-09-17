@@ -1,5 +1,5 @@
 #labels Featured
-This page shows how to train on Hadoop using CascadeSVM.
+#This page shows how to train on Hadoop using CascadeSVM.
 
 ===The test package for this page is [http://www.cs.cmu.edu/~lujiang/applications/CascadeSVMTrain.jar here]===
 
