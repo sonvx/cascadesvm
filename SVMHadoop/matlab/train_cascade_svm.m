@@ -1,28 +1,32 @@
+%%
+% Function: train_cascade_svm
+% Author: Shicheng Xu
+% E-mail: lightxuzju@gmail.com
+% Input parameters:
+%   train_label: N x 1 vector
+%   train_matrix: N x M matrix, N instances, M features
+%   subset_num: count of subsets of cascade svm, 8, 16, 32, 64....
 function [model, models, train_subset_ids, Lp, total_pass] = train_cascade_svm(train_label, train_matrix, subset_count)
-% train_label: N x 1 vector
-% train_matrix: N x M matrix, N instances, M features
-% subset_num: count of subsets of cascade svm, 8, 16, 32, 64....
     tic;
-%     matlabpool('open', 'local', int2str(subset_count));
     N = size(train_label, 1);
     subset_N = floor(N / subset_count);
     layer_size = log2(subset_count)+1;
-%% Compute size array
-%     (1:8:63)
-%     ans = 1     9    17    25    33    41    49    57
-%     (1:8:64)
-%     ans = 1     9    17    25    33    41    49    57
-%     (1:9:65)
-%     ans = 1    10    19    28    37    46    55    64
-%     (1:9:66)
-%     ans = 1    10    19    28    37    46    55    64
+    %% Compute size array
+    %     (1:8:63)
+    %     ans = 1     9    17    25    33    41    49    57
+    %     (1:8:64)
+    %     ans = 1     9    17    25    33    41    49    57
+    %     (1:9:65)
+    %     ans = 1    10    19    28    37    46    55    64
+    %     (1:9:66)
+    %     ans = 1    10    19    28    37    46    55    64
     size_array = (1:subset_N:N);
     size_array(subset_count + 1) = N + 1;
    
-%% Compute linear kernel
+    %% Compute linear kernel
     train_kernel = train_matrix * train_matrix';
     
-%% Cascade SVM
+    %% Cascade SVM
     % models: MAX_PASSES x layer_subset_num x (subset_count, subset_count /
     % 2, ..., 1)
     MAX_PASSES = 10; % Assume the cascade svm will convergence in 10 passes.
