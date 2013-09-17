@@ -2,7 +2,7 @@
 
 = Introduction =
 
-The matlab version code simply implements the original idea from Graf et al.[1]. The code is used to generate the demo on toy example and for verifying the correctness of the Hadoop version code. You might be interested to use it for testing on your own.
+The matlab version code simply implements the original idea from Graf et al. The code is used to generate the demo on toy example and for verifying the correctness of the Hadoop version code. You might be interested to use it for testing on your own.
 
 = Details =
 
@@ -29,7 +29,7 @@ Other code are used to run the experiment on toy examples, basically run_experim
 
 = Tips =
 
-  * You might not be able to call the function svmtrain, since the svmtrain.mexa64 here might not be suitable for your platform, please refer to [2] to compile the mex file.
+  * You might not be able to call the function svmtrain, since the svmtrain.mexa64 here might not be suitable for your platform, please refer to [http://www.csie.ntu.edu.tw/~cjlin/libsvm/ LibSVM home page] to compile the mex file.
 
   * If you want to see how the CascadeSVM is training when the split of data is unbalanced, please modify the following code in train_cascade_svm.m. Comment line 45 and uncomment line 46 should work.
 
