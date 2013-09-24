@@ -1,4 +1,4 @@
-#How to cite CascadeSVM.
+#summary How to cite CascadeSVM.
 
 Please cite the following demo paper:
 
