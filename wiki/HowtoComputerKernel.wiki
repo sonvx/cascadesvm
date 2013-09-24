@@ -1,4 +1,4 @@
-#How to computer big kernel matrices.
+#summary How to computer big kernel matrices.
 
 ===The test package for this page is [http://www.cs.cmu.edu/~lujiang/applications/kernelcomputation_test.zip here]===
 
