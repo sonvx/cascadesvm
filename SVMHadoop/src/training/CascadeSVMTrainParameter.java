@@ -8,9 +8,10 @@ public class CascadeSVMTrainParameter {
 	public String workDir;
 	// optional
 	public int nSubset;
-	public int nFold;
 	public double epsilon;
 	public int max_iter;
+	public double cost;
+	public double gamma;
 	public int nData;
 	
 	public static int parameterSize = 4;
@@ -18,8 +19,9 @@ public class CascadeSVMTrainParameter {
 	public static String helpText = 
 			"Usage: CascadeSVMTrain [options] kernel_path label_path idlist_path work_directory\n" +
 			"-n nSubset  : the size of the splitted subset (default 8)\n" +
-			"-v nFold    : the fold of cross validation (default 5)\n" +
-			"-e epsilon  : stopping criteria (default 1e-5)\n" +
+			"-c cost : set the parameter C of C-SVC, epsilon-SVR, and nu-SVR (default 1)\n" +
+			"-g gamma : set gamma in kernel function (default 1e-3)\n" +
+			"-e epsilon  : stopping criteria (default 1e-3)\n" +
 			"-i max_iter : max iteration (default 5)";
 	
 	public CascadeSVMTrainParameter(
@@ -28,7 +30,8 @@ public class CascadeSVMTrainParameter {
 			String idlistPath,
 			String workDir,
 			int nSubset, 
-			int nFold,
+			double cost,
+			double gamma,
 			double epsilon,
 			int max_iter,
 			int nData) {
@@ -37,10 +40,11 @@ public class CascadeSVMTrainParameter {
 		this.idlistPath = idlistPath;
 		this.workDir    = workDir;
 		this.nSubset    = nSubset;
-		this.nFold      = nFold;
+		this.cost		= cost;
+		this.gamma		= gamma;
 		this.epsilon	= epsilon;
 		this.max_iter   = max_iter;
-		this.nData      = nData;
+		this.nData		= nData;
 	}
 	
 	public CascadeSVMTrainParameter(
@@ -57,8 +61,9 @@ public class CascadeSVMTrainParameter {
 	
 	public CascadeSVMTrainParameter() {
 		nSubset = 8;
-		nFold = 5;
-		epsilon = 1e-5;
+		cost	= 1;
+		gamma	= 1e-3;
+		epsilon = 1e-3;
 		max_iter = 5;
 	}
 	
@@ -69,7 +74,8 @@ public class CascadeSVMTrainParameter {
 				parameter.idlistPath,
 				parameter.workDir,
 				parameter.nSubset,
-				parameter.nFold,
+				parameter.cost,
+				parameter.gamma,
 				parameter.epsilon,
 				parameter.max_iter,
 				parameter.nData
@@ -85,7 +91,8 @@ public class CascadeSVMTrainParameter {
 				break;
 			switch (args[i].charAt(1)) {
 			case 'n': nSubset = Integer.parseInt(args[i+1]); break;
-			case 'v': nFold = Integer.parseInt(args[i+1]); break;
+			case 'c': cost = Double.parseDouble(args[i+1]); break;
+			case 'g': gamma = Double.parseDouble(args[i+1]); break;
 			case 'e': epsilon = Double.parseDouble(args[i+1]); break;
 			case 'i': max_iter = Integer.parseInt(args[i+1]); break;
 			default:
@@ -109,6 +116,7 @@ public class CascadeSVMTrainParameter {
 
 	public String toString() {
 		return kernelPath + " " + labelPath + " " + idlistPath + " " + workDir + " " + 
-				Integer.toString(nSubset) + " " + Integer.toString(nFold) + " " + Double.toString(epsilon) + " " + Integer.toString(max_iter) + " " + Integer.toString(nData);
+				Integer.toString(nSubset) + " " + Double.toString(cost) + " " + Double.toString(gamma) + " " + 
+				Double.toString(epsilon) + " " + Integer.toString(max_iter) + " " + Integer.toString(nData);
 	}
 }

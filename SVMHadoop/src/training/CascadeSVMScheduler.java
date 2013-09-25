@@ -70,25 +70,25 @@ public class CascadeSVMScheduler extends MapReduceBase
 			}
 			double LD = scheduleHadoop(parameter, reporter);
 			// test convergence
-			if (parameter.iterationId <= parameter.max_iter && Math.abs(LD - parameter.lastLD) > parameter.epsilon) {
+			if (parameter.iterationId < parameter.max_iter && Math.abs(LD - parameter.lastLD) / parameter.lastLD > parameter.epsilon) {
 				CascadeSVMSchedulerParameter newParameter = new CascadeSVMSchedulerParameter(parameter);
 				newParameter.iterationId++;
 				newParameter.lastLD = LD;
-				int lastId = 2 * newParameter.nSubset - 1;
+				int lastId = 2 * newParameter.nSubset - 2;
 				newParameter.lastSVPath = CascadeSVMPathHelper.getSVPath(parameter.workDir, parameter.iterationId, lastId);
 				String schedulerParametersPath = CascadeSVMPathHelper.getSchedulerParameterPath(parameter.workDir);
-				CascadeSVMIOHelper.writeSchedulerParameterHadoop(schedulerParametersPath, parameter);
-				runSchedulerJob(schedulerParametersPath);
+				CascadeSVMIOHelper.writeSchedulerParameterHadoop(schedulerParametersPath, newParameter);
+				runSchedulerJob(schedulerParametersPath, conf);
 			} 
 		}
 		logger.info("[END]reduce()");
 	}
 
-	public static void runSchedulerJob(String schedulerParameterPath) throws IOException {
+	public static void runSchedulerJob(String schedulerParameterPath, JobConf oldConf) throws IOException {
 		logger.info("[BEGIN]runSchedulerJob()");
-		JobConf conf = new JobConf(CascadeSVMScheduler.class);
+		JobConf conf = new JobConf(oldConf, CascadeSVMScheduler.class);
 		conf.setJobName("CascadeSVM Scheduler");
-		FileInputFormat.addInputPath(conf, new Path(schedulerParameterPath));
+		FileInputFormat.setInputPaths(conf, new Path(schedulerParameterPath));
 		conf.setMapperClass(CascadeSVMScheduler.class);
 		conf.setReducerClass(CascadeSVMScheduler.class);
 		conf.setMapOutputKeyClass(IntWritable.class);
@@ -106,6 +106,9 @@ public class CascadeSVMScheduler extends MapReduceBase
 		conf.set("mapred.tasktracker.map.tasks.maximum","1");
 		conf.set("mapred.map.max.attempts","8");
 		conf.set("mapred.reduce.max.attempts","8");
+
+		conf.setNumMapTasks(1);
+		conf.setNumReduceTasks(1);
 		
 		JobClient client = new JobClient(conf);
 		client.submitJob(conf);
@@ -182,9 +185,12 @@ public class CascadeSVMScheduler extends MapReduceBase
 				CascadeSVMNode.runNodeJob(parameter, nodeParameterPath, startId, endId, conf);
 			}
 			
+			if (runningIds.size() == 0 && finishIds.size() == 1)
+				break;
+			
 			reporter.setStatus("Sleeping..zzz...");
 			try {
-				Thread.sleep(3*1000);
+				Thread.sleep(15*1000);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
