@@ -34,17 +34,17 @@ public class CascadeSVMNode extends MapReduceBase
 		implements Mapper<IntWritable, Text, IntWritable, Text>,
 		Reducer<IntWritable, Text, NullWritable, NullWritable> {
 	private static Logger logger;
-	private static double[] tune_C; // = {0.125d};
-	private static double[] tune_gamma;
+//	private static double[] tune_C; // = {0.125d};
+//	private static double[] tune_gamma;
 	private static int randomSeed;
 	static {
 		logger = Logger.getLogger(CascadeSVMNode.class);
-		tune_C = new double[5];
-		for (int i = 0; i < 5; i++)
-			tune_C[i] = Math.pow(2, i-2);
-		tune_gamma = new double[3];
-		for (int i = 0; i < 3; i++)
-			tune_gamma[i] = Math.pow(2, i-1);
+//		tune_C = new double[5];
+//		for (int i = 0; i < 5; i++)
+//			tune_C[i] = Math.pow(2, i-2);
+//		tune_gamma = new double[3];
+//		for (int i = 0; i < 3; i++)
+//			tune_gamma[i] = Math.pow(2, i-1);
 		randomSeed = 0;
 	}
 
@@ -53,7 +53,6 @@ public class CascadeSVMNode extends MapReduceBase
 			OutputCollector<IntWritable, Text> output, Reporter reporter)
 			throws IOException {
 		logger.info("[BEGIN]map()");
-		logger.info(value.toString());
 		CascadeSVMNodeParameter parameter = null;
 		try {
 			parameter = new CascadeSVMNodeParameter(value.toString());
@@ -62,7 +61,7 @@ public class CascadeSVMNode extends MapReduceBase
 			logger.info(CascadeSVMNodeParameter.helpText);
 			return ;
 		}
-		logger.info(parameter.toString());
+		logger.info(parameter.toShortString());
 		svm.rand.setSeed(randomSeed);
 		
 		reporter.setStatus("read id list");
@@ -79,19 +78,24 @@ public class CascadeSVMNode extends MapReduceBase
 		CascadeSVMIOHelper.printMemory();
 		
 		reporter.setStatus("create problem");
-		svm_problem problem = createSVMProblem(idList, kernel, labels);
+		svm_problem problem = createSVMProblem(idList, kernel, labels, parameter.gamma);
 		
 		CascadeSVMIOHelper.printMemory();
 		kernel = null; // GC
 		
-		reporter.setStatus("cross validation");
-		svm_parameter param = crossValidationHadoop(problem, parameter.nFold, reporter);
+//		reporter.setStatus("cross validation");
+//		svm_parameter param = crossValidationHadoop(problem, parameter.nFold, reporter);
+		svm_parameter param = getDefaultParams(parameter);
 		
 		reporter.setStatus("svm train");
 		svm_model model = svm.svm_train(problem, param);
 		
 		reporter.setStatus("write model");
 		CascadeSVMIOHelper.writeModelHadoop(parameter.modelPath, model);
+		// Map the support vector id to original id
+		for (int i = 0; i < model.l; i++) {
+			model.SV[i][0].value = idList.get((int)model.SV[i][0].value - 1);
+		}
 		
 		reporter.setStatus("write support vector");
 		CascadeSVMIOHelper.writeSVIdListHadoop(parameter.SVPath, model, idList);
@@ -100,7 +104,7 @@ public class CascadeSVMNode extends MapReduceBase
 		double LD = computeLD(model, problem);
 		CascadeSVMIOHelper.writeLDHadoop(parameter.LDPath, LD);
 		
-		output.collect(new IntWritable(0), new Text("done."));
+		output.collect(new IntWritable(0), new Text(parameter.LDPath + " done."));
 		logger.info("[END]map()");
 	}
 	
@@ -108,13 +112,17 @@ public class CascadeSVMNode extends MapReduceBase
 	public void reduce(IntWritable key, Iterator<Text> value,
 			OutputCollector<NullWritable, NullWritable> output, Reporter reporter)
 			throws IOException {
-		// Nothing to do.
+		while (value.hasNext()) {
+			Text LDPath = value.next();
+			reporter.setStatus(LDPath.toString());
+			logger.info(LDPath.toString());
+		}
 	}
 	
 	public static void runNodeJob(CascadeSVMSchedulerParameter parameter, String nodeParameterPath, int startId, int endId, JobConf oldConf) throws IOException {
 		logger.info("[BEGIN]runNodeJob()");
 		// JobConf conf = new JobConf(CascadeSVMNode.class);
-		JobConf conf = new JobConf(oldConf); // inherit job conf from old conf
+		JobConf conf = new JobConf(oldConf, CascadeSVMNode.class); // inherit job conf from old conf
 		// CascadeSVMNode (iteration 1, nodes 0-7)
 		conf.setJobName("CascadeSVMNode (iteration " + Integer.toString(parameter.iterationId) + ", nodes " + startId + "-" + endId + ")");
 		FileInputFormat.setInputPaths(conf, new Path(nodeParameterPath));
@@ -125,16 +133,19 @@ public class CascadeSVMNode extends MapReduceBase
 		conf.setMapOutputKeyClass(IntWritable.class);
 		conf.setMapOutputValueClass(Text.class);
 		
-    	conf.set("mapred.child.java.opts", "-Xmx1600m");		//cannot be too large <2000m
+    	conf.set("mapred.child.java.opts", "-Xmx3200m");		//cannot be too large <2000m
 		
-		conf.set("mapred.cluster.map.memory.mb","2048");
-		conf.set("mapred.cluster.reduce.memory.mb","2048");
+		conf.set("mapred.cluster.map.memory.mb","4096");
+		conf.set("mapred.cluster.reduce.memory.mb","4096");
 		
-		conf.set("mapred.job.map.memory.mb","2048");
-		conf.set("mapred.job.reduce.memory.mb","2048");
-		conf.set("mapred.tasktracker.map.tasks.maximum", Integer.toString(endId-startId+1));
+		conf.set("mapred.job.map.memory.mb","4096");
+		conf.set("mapred.job.reduce.memory.mb","4096");
+		conf.set("mapred.tasktracker.map.tasks.maximum", "1");
 		conf.set("mapred.map.max.attempts","8");
 		conf.set("mapred.reduce.max.attempts","8");
+		
+		conf.setNumMapTasks(endId-startId+1);
+		conf.setNumReduceTasks(1);
 		
 		JobClient client = new JobClient(conf);
 		client.submitJob(conf);
@@ -151,50 +162,50 @@ public class CascadeSVMNode extends MapReduceBase
 		return kernel;
 	}
 	
-	@SuppressWarnings("unchecked")
-	public svm_parameter crossValidationHadoop(svm_problem problem, int nrFold, Reporter reporter) {
-		 logger.info("[BEGIN]crossValidation()");
-		 double[] target = new double[problem.y.length];
-		 ArrayList<Double>[] probabilities = new ArrayList[problem.l+1];
-		 for (int i = 0; i < problem.l + 1; i++)
-			 probabilities[i] = new ArrayList<Double>();
-		 
-		 double bestMap = 0;
-		 double bestGamma = 1;
-		 double bestC = 1;
-		 svm_parameter parameter = getDefaultParams(); 
-		 double scale;
-		 for (int i = 0; i < tune_gamma.length; i++) {
-			 scale = (i==0 ? tune_gamma[i] : tune_gamma[i] / tune_gamma[i - 1]);
-			 changeProblem(problem, scale);
-			 for (int j = 0; j < tune_C.length; j++) {
-				 reporter.setStatus("cross validation: gamma = " + Double.toString(tune_gamma[i]) + "C = " + Double.toString(tune_C[i]));
-				 parameter.C = tune_C[i];
-				 svm.svm_cross_validation(problem, parameter, nrFold, target, probabilities);
-				 logger.info("probabilities[0]" + probabilities[0].toString());
-				 logger.info("probabilities[1]" + probabilities[1].toString());
-				 double map = computeAveragePrecision(problem.y, probabilities);
-				 if (map > bestMap)
-				 {
-					 bestMap = map;
-					 bestGamma = tune_gamma[i];
-					 bestC = tune_C[j];
-				 }
-			 }
-		 }
-		 /*Change problem to best parameter*/
-		 scale = bestGamma / tune_gamma[tune_gamma.length - 1];
-		 changeProblem(problem, scale);
-		 svm_parameter bestParameter = getDefaultParams();
-		 bestParameter.C = bestC;
-		 logger.info("bestMap: "+Double.toString(bestMap));
-		 logger.info("bestGamma = " + Double.toString(bestGamma));
-		 logger.info("bestC: " + Double.toString(bestC));
-		 logger.info("[END]crossValidation()");
-		 return bestParameter;
-	}
+//	@SuppressWarnings("unchecked")
+//	public svm_parameter crossValidationHadoop(svm_problem problem, int nrFold, Reporter reporter) {
+//		 logger.info("[BEGIN]crossValidation()");
+//		 double[] target = new double[problem.y.length];
+//		 ArrayList<Double>[] probabilities = new ArrayList[problem.l+1];
+//		 for (int i = 0; i < problem.l + 1; i++)
+//			 probabilities[i] = new ArrayList<Double>();
+//		 
+//		 double bestMap = 0;
+//		 double bestGamma = 1;
+//		 double bestC = 1;
+//		 svm_parameter parameter = getDefaultParams(); 
+//		 double scale;
+//		 for (int i = 0; i < tune_gamma.length; i++) {
+//			 scale = (i==0 ? tune_gamma[i] : tune_gamma[i] / tune_gamma[i - 1]);
+//			 changeProblem(problem, scale);
+//			 for (int j = 0; j < tune_C.length; j++) {
+//				 reporter.setStatus("cross validation: gamma = " + Double.toString(tune_gamma[i]) + "C = " + Double.toString(tune_C[i]));
+//				 parameter.C = tune_C[i];
+//				 svm.svm_cross_validation(problem, parameter, nrFold, target, probabilities);
+//				 logger.info("probabilities[0]" + probabilities[0].toString());
+//				 logger.info("probabilities[1]" + probabilities[1].toString());
+//				 double map = computeAveragePrecision(problem.y, probabilities);
+//				 if (map > bestMap)
+//				 {
+//					 bestMap = map;
+//					 bestGamma = tune_gamma[i];
+//					 bestC = tune_C[j];
+//				 }
+//			 }
+//		 }
+//		 /*Change problem to best parameter*/
+//		 scale = bestGamma / tune_gamma[tune_gamma.length - 1];
+//		 changeProblem(problem, scale);
+//		 svm_parameter bestParameter = getDefaultParams();
+//		 bestParameter.C = bestC;
+//		 logger.info("bestMap: "+Double.toString(bestMap));
+//		 logger.info("bestGamma = " + Double.toString(bestGamma));
+//		 logger.info("bestC: " + Double.toString(bestC));
+//		 logger.info("[END]crossValidation()");
+//		 return bestParameter;
+//	}
 
-	public svm_problem createSVMProblem(ArrayList<Integer> idList, float[][] kernel, double[] labels) {
+	public svm_problem createSVMProblem(ArrayList<Integer> idList, float[][] kernel, double[] labels, double gamma) {
 		logger.info("[BEGIN]createSVMProblem");
 		svm_problem prob = new svm_problem();
 		
@@ -210,7 +221,7 @@ public class CascadeSVMNode extends MapReduceBase
 			for (int j = 1; j < m; j++) {
 				prob.x[i][j] = new svm_node();
 				prob.x[i][j].index = j;
-				prob.x[i][j].value = Math.exp(kernel[i][j - 1]);
+				prob.x[i][j].value = Math.exp(gamma * kernel[i][j - 1]);
 			}
 		}
 		
@@ -232,22 +243,22 @@ public class CascadeSVMNode extends MapReduceBase
 			for (int j = 0; j < model.l; j++) {
 				LD = LD - 0.5 * model.sv_coef[0][i] * model.sv_coef[0][j] * problem.x[sv_indices[i]][sv_indices[j]+1].value;
 			}
-		logger.info("[BEGIN]computeLD()");
+		logger.info("[END]computeLD()");
 		return LD;
 	}
 	
 
 	
-	public svm_parameter getDefaultParams() {
+	public svm_parameter getDefaultParams(CascadeSVMNodeParameter parameter) {
 		svm_parameter param = new svm_parameter();
 		param.svm_type = svm_parameter.C_SVC;
 		param.kernel_type = svm_parameter.PRECOMPUTED;
 		param.degree = 3;
-		param.gamma = 0.125;	// 1/num_features, don't make it zero...
+		param.gamma = parameter.gamma;	// 1/num_features, don't make it zero...
 		param.coef0 = 0;
 		param.nu = 0.5;
 		param.cache_size = 100;
-		param.C = 1;
+		param.C = parameter.cost;
 		param.eps = 1e-3;
 		param.p = 0.1;
 		param.shrinking = 1;
@@ -258,90 +269,92 @@ public class CascadeSVMNode extends MapReduceBase
 		return param;
 	}
 	
-	public void changeProblem(svm_problem prob, double scale) {
-		logger.info("[BEGIN]changeProblem()");
-		for (int i = 0; i < prob.x.length; i++) {
-			for (int j = 1; j < prob.x[i].length; j++) {
-				prob.x[i][j].value = Math.exp(Math.log1p(prob.x[i][j].value - 1) * scale);
-			}
-		}
-		logger.info("[End]changeProblem()");
-	}
+//	public void changeProblem(svm_problem prob, double scale) {
+//		logger.info("[BEGIN]changeProblem()");
+//		for (int i = 0; i < prob.x.length; i++) {
+//			for (int j = 1; j < prob.x[i].length; j++) {
+//				prob.x[i][j].value = Math.exp(Math.log1p(prob.x[i][j].value - 1) * scale);
+//			}
+//		}
+//		logger.info("[End]changeProblem()");
+//	}
 	
-	/**
-	 * Format of probability
-	 * 1.0 0.0
-	   0.36625498614020674 0.6337450138597933 4.0
-       0.04081900003189424 0.959180999968106 4.0
-     *
-	 * @param probabilities
-	 * @return
-	 */
-	public double computeAveragePrecision(double[] label, ArrayList<Double>[] probabilities) {
-		logger.info("[BEGIN]computeAveragePrecision()");
-		int labelIndex = 0;
-		if (probabilities[0].get(1) == 1) {
-			labelIndex = 1;
-		}
-		
-		ArrayList<CrossValidationItem> crossValidationItems = new ArrayList<CrossValidationItem>(1024);
-		for (int i = 1; i < probabilities.length; i++) {
-			double prob = probabilities[i].get(labelIndex);
-			int foldno = (int) probabilities[i].get(2).doubleValue();
-			int trueLabel = (int) label[i - 1];
-			crossValidationItems.add(new CrossValidationItem(prob, trueLabel, foldno));
-		}
-		
-		ArrayList<ArrayList<CrossValidationItem>> CrossValidationItemBySorts = CrossValidationItem.getfolds(crossValidationItems);
-		double map = 0.0d;
-		for (int i = 0; i < CrossValidationItemBySorts.size(); i++) {
-			map += calculateAP(CrossValidationItemBySorts.get(i))[0];
-		}
-		map /= CrossValidationItemBySorts.size();
-		logger.info("[END]computeAveragePrecision()");
-		return map;
-	}
-
-	public double[] calculateAP(ArrayList<CrossValidationItem> crossValidationItems) {
-		// logger.info("[BEGIN]calculateAP()");
-		double[] result = new double[2];
-		result[0] = 0;
-		result[1] = -1;
-		double tp = 0;
-		int pos = 0;
-		//count the positive samples
-		for(int i = 0 ; i < crossValidationItems.size() ; i++) {
-			if(crossValidationItems.get(i).label == 1)	pos++;
-		}
-		
-		double deltaRecall = 1.0d / pos;
-		
-		Collections.sort(crossValidationItems);
-		
-		for(int i = 0 ; i < crossValidationItems.size() ; i++) {
-			if(crossValidationItems.get(i).label == 1)	{
-				tp++;
-				double cur_precision = tp/(i+1);
-				result[0] += cur_precision*deltaRecall;
-			}
-		}
-		// logger.info("[END]calculateAP()");
-		return result;
-	}
+//	/**
+//	 * Format of probability
+//	 * 1.0 0.0
+//	   0.36625498614020674 0.6337450138597933 4.0
+//       0.04081900003189424 0.959180999968106 4.0
+//     *
+//	 * @param probabilities
+//	 * @return
+//	 */
+//	public double computeAveragePrecision(double[] label, ArrayList<Double>[] probabilities) {
+//		logger.info("[BEGIN]computeAveragePrecision()");
+//		int labelIndex = 0;
+//		if (probabilities[0].get(1) == 1) {
+//			labelIndex = 1;
+//		}
+//		
+//		ArrayList<CrossValidationItem> crossValidationItems = new ArrayList<CrossValidationItem>(1024);
+//		for (int i = 1; i < probabilities.length; i++) {
+//			double prob = probabilities[i].get(labelIndex);
+//			int foldno = (int) probabilities[i].get(2).doubleValue();
+//			int trueLabel = (int) label[i - 1];
+//			crossValidationItems.add(new CrossValidationItem(prob, trueLabel, foldno));
+//		}
+//		
+//		ArrayList<ArrayList<CrossValidationItem>> CrossValidationItemBySorts = CrossValidationItem.getfolds(crossValidationItems);
+//		double map = 0.0d;
+//		for (int i = 0; i < CrossValidationItemBySorts.size(); i++) {
+//			map += calculateAP(CrossValidationItemBySorts.get(i))[0];
+//		}
+//		map /= CrossValidationItemBySorts.size();
+//		logger.info("[END]computeAveragePrecision()");
+//		return map;
+//	}
+//
+//	public double[] calculateAP(ArrayList<CrossValidationItem> crossValidationItems) {
+//		// logger.info("[BEGIN]calculateAP()");
+//		double[] result = new double[2];
+//		result[0] = 0;
+//		result[1] = -1;
+//		double tp = 0;
+//		int pos = 0;
+//		//count the positive samples
+//		for(int i = 0 ; i < crossValidationItems.size() ; i++) {
+//			if(crossValidationItems.get(i).label == 1)	pos++;
+//		}
+//		
+//		double deltaRecall = 1.0d / pos;
+//		
+//		Collections.sort(crossValidationItems);
+//		
+//		for(int i = 0 ; i < crossValidationItems.size() ; i++) {
+//			if(crossValidationItems.get(i).label == 1)	{
+//				tp++;
+//				double cur_precision = tp/(i+1);
+//				result[0] += cur_precision*deltaRecall;
+//			}
+//		}
+//		// logger.info("[END]calculateAP()");
+//		return result;
+//	}
 	
 	// Local version
 
 	public void trainLocal(CascadeSVMNodeParameter parameter) throws IOException {
 		logger.info("[Begin]trainLocal()");
 		svm.rand.setSeed(randomSeed);
-		ArrayList<Integer> idList = CascadeSVMIOHelper.readIdListLocal(parameter.idlistPath);
+//		ArrayList<Integer> idList = CascadeSVMIOHelper.readIdListLocal(parameter.idlistPath);
+		ArrayList<Integer> idList = CascadeSVMIOHelper.readIdListHadoop(parameter.idlistPath);
 		double[] labels = CascadeSVMIOHelper.readLabelLocal(parameter.labelPath, idList);
 		float[][] kernel = projectKernelLocal(parameter, idList);
 		logger.info("kernel[0][0] = " + Float.toString(kernel[0][0]));
 		logger.info("kernel[0][1] = " + Float.toString(kernel[0][1]));
-		svm_problem problem = createSVMProblem(idList, kernel, labels);
+		svm_problem problem = createSVMProblem(idList, kernel, labels, parameter.gamma);
 		kernel = null;  // GC
-		svm_parameter param = crossValidationLocal(problem, parameter.nFold);
+//		svm_parameter param = crossValidationLocal(problem, parameter.nFold);
+		svm_parameter param = getDefaultParams(parameter);
 		svm_model model = svm.svm_train(problem, param); 													 // train
 		CascadeSVMIOHelper.writeModelLocal(parameter.modelPath, model);												 // output model
 		CascadeSVMIOHelper.writeSVIdListLocal(parameter.SVPath, model, idList);
@@ -362,47 +375,47 @@ public class CascadeSVMNode extends MapReduceBase
 		return kernel;
 	} 
 	
-	@SuppressWarnings("unchecked")
-	public svm_parameter crossValidationLocal(svm_problem problem, int nrFold) {
-		 logger.info("[BEGIN]crossValidation()");
-		 double[] target = new double[problem.y.length];
-		 ArrayList<Double>[] probabilities = new ArrayList[problem.l+1];
-		 for (int i = 0; i < problem.l + 1; i++)
-			 probabilities[i] = new ArrayList<Double>();
-		 
-		 double bestMap = 0;
-		 double bestGamma = 1;
-		 double bestC = 1;
-		 svm_parameter parameter = getDefaultParams(); 
-		 double scale;
-		 for (int i = 0; i < tune_gamma.length; i++) {
-			 scale = (i==0 ? tune_gamma[i] : tune_gamma[i] / tune_gamma[i - 1]);
-			 changeProblem(problem, scale);
-			 for (int j = 0; j < tune_C.length; j++) {
-				 parameter.C = tune_C[i];
-				 svm.svm_cross_validation(problem, parameter, nrFold, target, probabilities);
-				 logger.info("probabilities[0]" + probabilities[0].toString());
-				 logger.info("probabilities[1]" + probabilities[1].toString());
-				 double map = computeAveragePrecision(problem.y, probabilities);
-				 if (map > bestMap)
-				 {
-					 bestMap = map;
-					 bestGamma = tune_gamma[i];
-					 bestC = tune_C[j];
-				 }
-			 }
-		 }
-		 /*Change problem to best parameter*/
-		 scale = bestGamma / tune_gamma[tune_gamma.length - 1];
-		 changeProblem(problem, scale);
-		 svm_parameter bestParameter = getDefaultParams();
-		 bestParameter.C = bestC;
-		 logger.info("bestMap: "+Double.toString(bestMap));
-		 logger.info("bestGamma = " + Double.toString(bestGamma));
-		 logger.info("bestC: " + Double.toString(bestC));
-		 logger.info("[END]crossValidation()");
-		 return bestParameter;
-	}
+//	@SuppressWarnings("unchecked")
+//	public svm_parameter crossValidationLocal(svm_problem problem, int nrFold) {
+//		 logger.info("[BEGIN]crossValidation()");
+//		 double[] target = new double[problem.y.length];
+//		 ArrayList<Double>[] probabilities = new ArrayList[problem.l+1];
+//		 for (int i = 0; i < problem.l + 1; i++)
+//			 probabilities[i] = new ArrayList<Double>();
+//		 
+//		 double bestMap = 0;
+//		 double bestGamma = 1;
+//		 double bestC = 1;
+//		 svm_parameter parameter = getDefaultParams(); 
+//		 double scale;
+//		 for (int i = 0; i < tune_gamma.length; i++) {
+//			 scale = (i==0 ? tune_gamma[i] : tune_gamma[i] / tune_gamma[i - 1]);
+//			 changeProblem(problem, scale);
+//			 for (int j = 0; j < tune_C.length; j++) {
+//				 parameter.C = tune_C[i];
+//				 svm.svm_cross_validation(problem, parameter, nrFold, target, probabilities);
+//				 logger.info("probabilities[0]" + probabilities[0].toString());
+//				 logger.info("probabilities[1]" + probabilities[1].toString());
+//				 double map = computeAveragePrecision(problem.y, probabilities);
+//				 if (map > bestMap)
+//				 {
+//					 bestMap = map;
+//					 bestGamma = tune_gamma[i];
+//					 bestC = tune_C[j];
+//				 }
+//			 }
+//		 }
+//		 /*Change problem to best parameter*/
+//		 scale = bestGamma / tune_gamma[tune_gamma.length - 1];
+//		 changeProblem(problem, scale);
+//		 svm_parameter bestParameter = getDefaultParams();
+//		 bestParameter.C = bestC;
+//		 logger.info("bestMap: "+Double.toString(bestMap));
+//		 logger.info("bestGamma = " + Double.toString(bestGamma));
+//		 logger.info("bestC: " + Double.toString(bestC));
+//		 logger.info("[END]crossValidation()");
+//		 return bestParameter;
+//	}
 	
 	// TEST Hadoop
 //	public static void main(String[] args) {
@@ -454,14 +467,15 @@ public class CascadeSVMNode extends MapReduceBase
 	// Test Local
 	public static void main(String[] args) {
 		CascadeSVMNodeParameter parameter = new CascadeSVMNodeParameter();
-		parameter.modelPath  = "C:\\Users\\Light\\JavaJar\\workDir\\model.1.0";
-		parameter.SVPath     = "C:\\Users\\Light\\JavaJar\\workDir\\sv.1.0";
-		parameter.LDPath     = "C:\\Users\\Light\\JavaJar\\workDir\\LD.1.0";
-		parameter.kernelPath = "C:\\Users\\Light\\JavaJar\\sin10000";
-		parameter.labelPath  = "C:\\Users\\Light\\JavaJar\\10000.labels";
-		parameter.idlistPath = "C:\\Users\\Light\\JavaJar\\100.idlist";
-		parameter.workDir	 = "C:\\Users\\Light\\JavaJar\\workDir";
-		parameter.nFold		 = 5;
+		parameter.modelPath  = "C:/Users/Light/JavaJar/workDir/model100";
+		parameter.SVPath     = "C:/Users/Light/JavaJar/workDir/SV100";
+		parameter.LDPath     = "C:/Users/Light/JavaJar/workDir/LD100";
+		parameter.kernelPath = "C:/Users/Light/JavaJar/sin10000";
+		parameter.labelPath  = "C:/Users/Light/JavaJar/10000.labels";
+		parameter.idlistPath = "C:/Users/Light/JavaJar/subset.1.0";
+		parameter.workDir	 = "C:/Users/Light/JavaJar/workDir";
+		parameter.cost		 = 1;
+		parameter.gamma		 = 0.001;
 		parameter.nData 	 = 10000;
 		try {
 			new CascadeSVMNode().trainLocal(parameter);

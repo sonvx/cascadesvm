@@ -167,7 +167,7 @@ public class CascadeSVMIOHelper {
 			writer = SequenceFile.createWriter(fs, conf, path, key.getClass(), value.getClass());
 			for (int i = 0; i < model.l; i++) {
 				key.set(i);
-				value.set(idList.get((int)model.SV[i][0].value - 1));
+				value.set((int) model.SV[i][0].value);
 				writer.append(key, value);
 			}
 		} finally {
@@ -270,7 +270,30 @@ public class CascadeSVMIOHelper {
 		logger.info("[END]writeModelHadoop("+modelPath+")");
 	}
 	
-	
+
+	public static ArrayList<CascadeSVMSchedulerParameter> readSchedulerParameterHadoop(String pathString) throws IOException, CascadeSVMParameterFormatError {
+		logger.info("[BEGIN]readSchedulerParameterHadoop("+pathString+")");
+		ArrayList<CascadeSVMSchedulerParameter> schedulerParameters = new ArrayList<CascadeSVMSchedulerParameter>();
+		Configuration conf = new Configuration();
+		FileSystem fs = FileSystem.get(conf);
+		Path path = new Path(pathString);
+		SequenceFile.Reader reader = null;
+		try {
+			reader = new SequenceFile.Reader(fs, path, conf);
+			IntWritable key = new IntWritable();
+			Text value = new Text();
+			while (reader.next(key, value)) {
+				schedulerParameters.add(new CascadeSVMSchedulerParameter(value.toString()));
+				logger.info("key = " + key.get());
+				logger.info("value = " + value.toString());
+				// logger.info(value.toString());
+			}
+		} finally {
+			IOUtils.closeStream(reader);
+		}
+		logger.info("[END]readSchedulerParameterHadoop("+pathString+")");
+		return schedulerParameters;
+	}
 	/*
 	 * (Hadoop) SchedulerParameter
 	 * Each line is a parameter.
@@ -342,6 +365,29 @@ public class CascadeSVMIOHelper {
 //	}
 
 
+	public static ArrayList<CascadeSVMNodeParameter> readNodeParameterHadoop(String pathString) throws IOException, CascadeSVMParameterFormatError {
+		logger.info("[BEGIN]readNodeParameterHadoop("+pathString+")");
+		ArrayList<CascadeSVMNodeParameter> nodeParameters = new ArrayList<CascadeSVMNodeParameter>();
+		Configuration conf = new Configuration();
+		FileSystem fs = FileSystem.get(conf);
+		Path path = new Path(pathString);
+		SequenceFile.Reader reader = null;
+		try {
+			reader = new SequenceFile.Reader(fs, path, conf);
+			IntWritable key = new IntWritable();
+			Text value = new Text();
+			while (reader.next(key, value)) {
+				nodeParameters.add(new CascadeSVMNodeParameter(value.toString()));
+				logger.info("key = " + key.get());
+				logger.info("value = " + value.toString());
+				// logger.info(value.toString());
+			}
+		} finally {
+			IOUtils.closeStream(reader);
+		}
+		logger.info("[END]readNodeParameterHadoop("+pathString+")");
+		return nodeParameters;
+	}
 	/*
 	 * (Hadoop) NodeParameter
 	 * Each line is a parameter.
@@ -472,7 +518,7 @@ public class CascadeSVMIOHelper {
 		Path path = new Path(pathString);
 		if (!fs.exists(path))
 		{
-			logger.info("[END]readLDHadoop(IOException)");
+			logger.info("[END]readLDHadoop("+pathString+"), FileNotFound");
 			throw(new IOException());
 		}
 		FSDataInputStream in = fs.open(path);
