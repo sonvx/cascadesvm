@@ -1,5 +1,3 @@
 #summary How to cite CascadeSVM.
 
-Please cite the following demo paper:
-
-Lu Jiang, Shicheng Xu and Alexander G. Hauptmann, "CascadeSVM: a SVM classifier for big data on hadoop", in ICDE 2014 (under review).
+Please cite the following paper:
