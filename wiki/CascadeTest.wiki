@@ -9,7 +9,7 @@ java -jar bmatrix_writer.jar feature_dir  idlistfile  output_dir chunk_size name
 }}}
   * feature_dir  is the untared features outputted by feature extraction pipeline
   * chunk_size is the number of line in each B matrix; the empirical setting is 200
-  * name_prefix is a string indicating the feature name
+  * name_prefix is a string indicating the feature name~~
 Example code:
 {{{
 java -jar bmatrix_writer.jar example/features/sift/ example/idlist.txt example/bmatrix/sift 3 sift
